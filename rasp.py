@@ -1,12 +1,13 @@
 import cv2, numpy as np
 from time import sleep
-from picamera2 import PiCamera2
+from picamera2 import Picamera2
+import time
 
 # --- Camera Init --- #
-picam2 = PiCamera2()
+picam2 = Picamera2()
 picam2.preview_configuration.main.size = (640, 480)
 picam2.preview_configuration.main.format = "RGB888"
-picam2.preview_configuration.controls.Framerate = 30
+picam2.preview_configuration.controls.FrameRate = 30
 picam2.preview_configuration.align()
 picam2.configure("preview")
 picam2.start()
@@ -21,8 +22,8 @@ def drawRoi(img, roi, color=(0, 255, 0), thickness=2, label=None):
     x1, y1, x2, y2 = roi
     cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
     if label:
-        cv2.putText(img, label, (x1, max(15, y1 - 8),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA))
+        cv2.putText(img, label, (x1, max(15, y1 - 8)), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
     return img
 
 def findWallAreaLab(frameRgb, roi, labLower, labUpper, minContourArea=50):
@@ -41,8 +42,8 @@ def findWallAreaLab(frameRgb, roi, labLower, labUpper, minContourArea=50):
 
     # Clean up noise
     kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iternations=1)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iternations=2)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     areaMax = 0
@@ -106,9 +107,9 @@ while True:
         
         if confirmCount >= CONFIRM_FRAMES:
             if leftArea < rightArea:
-                side = "right"
-            elif rightArea < leftArea:
                 side = "left"
+            elif rightArea < leftArea:
+                side = "right"
             else:
                 side = "both"
             confirmCount = 0
@@ -134,25 +135,25 @@ while True:
 
     # Draw contours if found
     if leftContour is not None:
-        cv2.drawContours(frame, [leftContour], -1, (255, 0, 0), 2)
+        cv2.drawContours(frame, [leftContour], -1, (0, 255, 255), 2)
     if rightContour is not None:
-        cv2.drawContours(frame, [rightContour], -1, (255, 0, 0), 2)
+        cv2.drawContours(frame, [rightContour], -1, (0, 255, 255), 2)
 
     # show numeric values
-    cv2.putText(frame, f"Left Area: {leftArea}", (roi1[0], roi1[1] - 30),
+    cv2.putText(frame, f"Left Area: {leftArea}", (roi1[0], roi1[1] - 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(frame, f"Right Area: {rightArea}", (roi2[0], roi2[1] - 30),
+    cv2.putText(frame, f"Right Area: {rightArea}", (roi2[0], roi2[1] - 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(frame, f"Confirm Count: {confirmCount}", (10, 90),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(frame, f"Elapsed Time Since Turn Enter: {now - (turnEnterTime if turnEnterTime else now):.2f}s", (10, 120),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    cv2.putText(frame, f"Confirm Count: {confirmCount}", (roi1[0], 90),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    cv2.putText(frame, f"Elapsed Time Since Turn Enter: {now - (turnEnterTime if turnEnterTime else now):.2f}s", (roi1[0], roi1[3]+30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
     # show mode
-    cv2.putText(frame, f"Mode: {mode}", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-    cv2.putText(frame, f"Turn Side: {side}", (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(frame, f"Mode: {mode}", (roi1[0], 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    cv2.putText(frame, f"Turn Side: {side}", (roi1[0], 60),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
     # Display results
     cv2.imshow("Frame", frame)
