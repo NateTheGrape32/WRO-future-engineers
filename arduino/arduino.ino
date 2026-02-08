@@ -22,11 +22,53 @@ static void processCommand(char* cmd) {
   char* cr = strchr(cmd, '\r');
   if (cr) *cr = '\0';
   
-  while (*cmd && isspace((unsigned char)*cmd)) cmd++;
+  while (*cmd && isspace((unsigned char)*cmd)) cmd++; // Trim leading whitespace
   if (*cmd == '\0') return;
+
+  char type = *cmd++;
+
+  // Parse int argument
+  char endp = nullptr;
+  long val = strtol(cmd, &endp, 10);
+
+  // Check for at least one digit
+  if (endp == cmd) return;
+
+  switch (type) {
+    case 'S': // Set servo position
+      if (val < 0 || val > 180) return; // Invalid angle
+      servo.write(val);
+      break;
+    default:
+      // Ignore unknown command type
+      break;
+  }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  while (Serial.available() >0) {
+    char c = (char)Serial.read();
+    if (c == SOC) {
+      inCommand = true;
+      lineLen = 0;
+    } 
+    if (inCommand) {
+      if (c == '\n') {
+        lineBuf[lineLen] = '\0'; // Null-terminate command
+        processCommand(lineBuf);
+        inCommand = false;
+        lineLen = 0;
+        continue;
+      }
 
+      if (lineLen < MAX_LINE) {
+        lineBuf[lineLen++] = c; // Append char to command buffer
+      } else {
+        // Command too long, abandon and reset
+        inCommand = false;
+        lineLen = 0;
+      }
+  }
+
+}
 }
