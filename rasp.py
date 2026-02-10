@@ -1,7 +1,7 @@
 import cv2, numpy as np
 from time import sleep
 from picamera2 import Picamera2
-import time
+import time, serial
 
 # --- Camera Init --- #
 picam2 = Picamera2()
@@ -11,7 +11,11 @@ picam2.preview_configuration.controls.FrameRate = 30
 picam2.preview_configuration.align()
 picam2.configure("preview")
 picam2.start()
-sleep(0.5)  # Allow camera to warm up
+sleep(2)  # Allow camera to warm up and arduino port to boot
+
+ser = serial.Serial('/dev/ttyACM0', 112500, timeout=1)  # Update with your Arduino's port
+ser.reset_input_buffer()  # Clear any pending input/output
+ser.reset_output_buffer()
 
 # --- ROIs (x1, y1, x2, y2) --- #
 roi1 = [20, 170, 240, 220] # Left side
@@ -55,15 +59,13 @@ def findWallAreaLab(frameRgb, roi, labLower, labUpper, minContourArea=50):
             contourMax = c
     if contourMax is not None:
         contourMax += np.array([x1, y1], dtype=np.uint32)  # Shift contour to full-frame coordinates for drawing on the OG frame
-    '''
-    wallPixels = cv2.countNonZero(mask)
-    totalPixels = mask.size
-    wallAreaPercent = (wallPixels / totalPixels) * 100
-    '''
     return contourMax, mask, areaMax, #wallAreaPercent
 
 def pdController(error, kp=0.1, kd=0.05):
-    pass
+    global prevError
+    correction = (kp * error) + (kd * (error - prevError))
+    prevError = error
+    ser.write(f"$S{correction}\n")
 
 def turn(side, speed=0.5):
     pass
@@ -76,12 +78,19 @@ LAB_UPPER = np.array([70, 255, 255], dtype=np.uint8)
 ENTER_TURN_THRESH = 550  # area threshold to enter turning zone
 EXIT_TURN_THRESH = 1200   # area threshold to exit turning zone
 EXIT_TIME_THRESH = 10.0
+EXIT_ANGLE_THRESH = 90.0 # minimum turn angle before allowing exit (prevents false exits from small turns or noise)
 
 # --- False trigger prevention --- #
 CONFIRM_FRAMES = 5  # number of consecutive frames to confirm turn
 side = None
 confirmCount = 0
 turnEnterTime = None
+
+# --- Turn degree variables --- #
+enterTurnDegree = None
+turnDegrees = None
+
+prevError = 0
 
 mode = "FOLLOW_WALL"
 
@@ -115,18 +124,23 @@ while True:
             confirmCount = 0
             mode = "TURNING"
             turnEnterTime = now
+            enterTurnAngle = int(ser.readline().decode().strip())
     
     # --- Turning --- #
     else:
-        turn(side)
+        ser.write(f"$T{side}\n") # send turn command to arduino
+        delta = abs(enterTurnDegree - int(ser.readline().decode().strip()))
+        turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
         elapsed = now - (turnEnterTime if turnEnterTime else now)
-        if elapsed >= EXIT_TIME_THRESH: # minimum time before exit
+        if elapsed >= EXIT_TIME_THRESH and turnDegrees > EXIT_ANGLE_THRESH: # minimum time & turn angle before exit
             if (side == "both" and leftArea > EXIT_TURN_THRESH and rightArea > EXIT_TURN_THRESH)\
                 or (side == "left" and leftArea > EXIT_TURN_THRESH)\
                 or (side == "right" and rightArea > EXIT_TURN_THRESH): # check if wall seen again
                 mode = "FOLLOW_WALL"
                 side = None
                 turnEnterTime = None
+                enterTurnDegree = None
+                turnDegrees = None
 
     # --- Visualization --- #
     # Draw ROIs and contours

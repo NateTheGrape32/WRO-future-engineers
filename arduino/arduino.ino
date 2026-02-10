@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <Servo.h>
+#include <Arduino_BMI270_BMM150.h>
 
 static const size_t MAX_LINE = 16; // Max command line length, excluding EOL
 static char lineBuf[MAX_LINE+1];
@@ -13,7 +14,18 @@ Servo servo;
 
 void setup() {
   Serial.begin(112500);
+  while (!Serial);
+  if (!IMU.begin()) {
+    Serial.println("Failed to initialize IMU!");
+    while (1);
+  }
+  Serial.println("IMU initialized successfully.");
 
+}
+
+static void callibrateGyro() {
+  float biasX = 0, biasY = 0, biasZ = 0;
+  const int samples = 100;
 }
 
 static void processCommand(char* cmd) {
@@ -33,11 +45,23 @@ static void processCommand(char* cmd) {
 
   // Check for at least one digit
   if (endp == cmd) return;
+  if (*endp == 'left' || *endp == 'right') val = (*endp == 'left') ? -1 : 1;
 
   switch (type) {
     case 'S': // Set servo position
       if (val < 0 || val > 180) return; // Invalid angle
       servo.write(val);
+      break;
+    case 'T': // return IMU data
+      // Read IMU data
+      float gx, gy, gz;
+      if (imu.gyroscopeAvailable()) imu.readGyroscope(gx, gy, gz);
+      Serial.println(gx);
+      if (val == 1) {
+        Serial.println("Turning left");
+      } else if (val == -1) {
+        Serial.println("Turning right");
+      }
       break;
     default:
       // Ignore unknown command type
