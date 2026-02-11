@@ -5,27 +5,50 @@
 #include <Servo.h>
 #include <Arduino_BMI270_BMM150.h>
 
-static const size_t MAX_LINE = 16; // Max command line length, excluding EOL
-static char lineBuf[MAX_LINE+1];
+static const size_t MAX_LINE = 16;  // Max command line length, excluding EOL
+static char lineBuf[MAX_LINE + 1];
 static size_t lineLen = 0;
-static const char SOC = '$'; // start of command character
+static const char SOC = '$';  // start of command character
 static bool inCommand = false;
+static float biasX = 0.0, biasY = 0.0, biasZ = 0.0;
 Servo servo;
+
+static void calibrateGyro(float& biasX, float& biasY, float& biasZ) {
+  const int samples = 1000;
+  int collected = 0;
+
+  delay(200);  // wait for sensor to warm up
+
+  while (collected < samples) {
+    if (IMU.gyroscopeAvailable()) {
+      float gx, gy, gz;
+      IMU.readGyroscope(gx, gy, gz);
+      biasX += gx;
+      biasY += gy;
+      biasZ += gz;
+      collected++;
+
+      delay(5);  // match gyro's ODR of ~100-200 Hz
+    }
+  }
+  biasX /= samples;
+  biasY /= samples;
+  biasZ /= samples;
+}
 
 void setup() {
   Serial.begin(112500);
-  while (!Serial);
+  while (!Serial)
+    ;
+
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
-    while (1);
+    while (1)
+      ;
   }
   Serial.println("IMU initialized successfully.");
 
-}
-
-static void callibrateGyro() {
-  float biasX = 0, biasY = 0, biasZ = 0;
-  const int samples = 100;
+  calibrateGyro(biasX, biasY, biasZ);
 }
 
 static void processCommand(char* cmd) {
@@ -33,30 +56,38 @@ static void processCommand(char* cmd) {
 
   char* cr = strchr(cmd, '\r');
   if (cr) *cr = '\0';
-  
-  while (*cmd && isspace((unsigned char)*cmd)) cmd++; // Trim leading whitespace
+
+  while (*cmd && isspace((unsigned char)*cmd)) cmd++;  // Trim leading whitespace
   if (*cmd == '\0') return;
 
   char type = *cmd++;
 
   // Parse int argument
-  char endp = nullptr;
+  char* endp = nullptr;
   long val = strtol(cmd, &endp, 10);
 
-  // Check for at least one digit
-  if (endp == cmd) return;
-  if (*endp == 'left' || *endp == 'right') val = (*endp == 'left') ? -1 : 1;
+  if (endp == cmd) {  // Check for valid turning direction if no digit found
+    if (strcmp("left", cmd) == 0) {
+      val = 1;
+    } else if (strcmp("right", cmd) == 0) {
+      val = -1;
+    } else {
+      return;  // Exit if not a valid command
+    }
+  }
 
   switch (type) {
-    case 'S': // Set servo position
-      if (val < 0 || val > 180) return; // Invalid angle
+    case 'S':                            // Set servo position
+      if (val < 0 || val > 180) return;  // Invalid angle
       servo.write(val);
       break;
-    case 'T': // return IMU data
-      // Read IMU data
+    case 'T':  // return IMU data and turn
       float gx, gy, gz;
-      if (imu.gyroscopeAvailable()) imu.readGyroscope(gx, gy, gz);
-      Serial.println(gx);
+      if (IMU.gyroscopeAvailable()) {
+        IMU.readGyroscope(gx, gy, gz);
+        Serial.println(gx - biasX);
+      }
+      delay(10);
       if (val == 1) {
         Serial.println("Turning left");
       } else if (val == -1) {
@@ -70,15 +101,15 @@ static void processCommand(char* cmd) {
 }
 
 void loop() {
-  while (Serial.available() >0) {
+  while (Serial.available() > 0) {
     char c = (char)Serial.read();
     if (c == SOC) {
       inCommand = true;
       lineLen = 0;
-    } 
+    }
     if (inCommand) {
       if (c == '\n') {
-        lineBuf[lineLen] = '\0'; // Null-terminate command
+        lineBuf[lineLen] = '\0';  // Null-terminate command
         processCommand(lineBuf);
         inCommand = false;
         lineLen = 0;
@@ -86,13 +117,12 @@ void loop() {
       }
 
       if (lineLen < MAX_LINE) {
-        lineBuf[lineLen++] = c; // Append char to command buffer
+        lineBuf[lineLen++] = c;  // Append char to command buffer
       } else {
-        // Command too long, abandon and reset
+        // Command too long
         inCommand = false;
         lineLen = 0;
       }
+    }
   }
-
-}
 }
