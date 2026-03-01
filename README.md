@@ -10,4 +10,5 @@ This Pi camera: https://www.aliexpress.com/item/1005009258177201.htmlpdp_npi=6%4
 This Pi Power Regulator: https://ca.robotshop.com/products/yahboom-power-supply-expansion-board-raspberry-pi-5 
 
 This Battery/Power Supply: https://genstattu.com/gens-ace-1300mah-2s-7-4v-45c-g-tech-lipo-battery-pack-with-deans-plug/?srsltid=AfmBOoo-qPXzcxuH2dIqTfVYg5ghG9WdKi2b53X-R9M8j3XF_JQlLKJL 
+
 This Arduino Nano: https://store-usa.arduino.cc/products/nano-33-ble-sense-rev2 
