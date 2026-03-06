@@ -37,9 +37,12 @@ static void calibrateGyro(float& biasX, float& biasY, float& biasZ) {
 }
 
 void setup() {
+  pinMode(,OUTPUT);
+  pinMode(,OUTPUT);
+  pinMode(,OUTPUT);
+
   Serial.begin(112500);
-  while (!Serial)
-    ;
+  while (!Serial);
 
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
@@ -90,8 +93,12 @@ static void processCommand(char* cmd) {
       delay(10);
       if (val == 1) {
         Serial.println("Turning left");
+        digitalWrite(, HIGH);
+        digitalWrite(, LOW);
       } else if (val == -1) {
         Serial.println("Turning right");
+        digitalWrite(, LOW);
+        digitalWrite(, HIGH);
       }
       break;
     default:
@@ -101,6 +108,10 @@ static void processCommand(char* cmd) {
 }
 
 void loop() {
+  analogueWrite(, 255);
+  digitalWrite(, HIGH);
+  digitalWrite(, HIGH);
+
   while (Serial.available() > 0) {
     char c = (char)Serial.read();
     if (c == SOC) {
