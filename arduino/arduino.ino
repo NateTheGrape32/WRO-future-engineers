@@ -41,7 +41,7 @@ void setup() {
   pinMode(,OUTPUT);
   pinMode(,OUTPUT);
 
-  Serial.begin(112500);
+  Serial.begin(115200);
   while (!Serial);
 
   if (!IMU.begin()) {

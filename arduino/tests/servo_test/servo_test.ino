@@ -6,22 +6,25 @@
 Servo servo;
 static int pos = 0;
 static int pulse = 500;
-static char state = '';
-static char line[4];
+static char state = 0;
+static char line[16];
 static size_t lineLen = 0;
 
 void setup() {
-    Serial.begin(112500);
-    servo.attach(9);
+    Serial.begin(115200);
+    servo.attach(9, 900, 2100); //Adjusts PWM ranges to fit the HS-5055MG servo
 }
 
 void loop() {
     while (Serial.available() > 0) {
         char c = (char)Serial.read();
-        if (c == 'a') {
-            state = 'a';
-        } else {
-            state = 'b';
+
+        if (c == '\r') continue;
+
+        if (c == 'a' || c == 'b') {
+            state = c;
+            lineLen = 0;
+            continue;
         }
 
         if (state) {
@@ -30,19 +33,25 @@ void loop() {
                 line[lineLen] = '\0';
                 lineLen = 0;
                 if (state == 'a') {
-                    pos = stoi(line);
-                    if (pos > 180) pos = 180;
-                    if (pos < 0) pos = 0;
+                    pos = atoi(line);
+                    pos = constrain(pos, 0, 180);
                     servo.write(pos);
                     Serial.print("Servo position: ");
                     Serial.println(pos);
-                } else {
-                    pulse = stoi(line);
-                    if (pulse > 2500) pulse = 500;
-                    if (pulse < 500) pulse = 2500;
+                } else if (state == 'b') {
+                    //The commented code would work with the Nano 33 BLE Sense
+                    //Apparently, writeMicroseconds is a little broken on the Nano 33 BLE Sense
+                    pulse = atoi(line);
+                    pulse = constrain(pulse, 900, 2100);
                     servo.writeMicroseconds(pulse);
                     Serial.print("Servo pulse: ");
                     Serial.println(pulse);
+                    // Convert microseconds to angle and use write() instead of writeMicroseconds()
+                    // Standard mapping: 544us = 0°, 2400us = 180°
+                    /*int angle = map(pulse, 900, 2100, 0, 180);
+                    servo.write(angle);
+                    Serial.print("Servo pulse (as angle): ");
+                    Serial.println(angle);*/
                 }
             }
         }
