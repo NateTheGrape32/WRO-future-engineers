@@ -1,0 +1,5 @@
+Wheel Holder: used to place above a part of the wheels in order to prevent them from going up and allowing the body of the robot from touching the ground when placed of the floor
+Battery & Arduino: 2nd layer, holds both the battery and Arduino Nano which connect to the other layers
+RaspberryPi: 3rd layer, holds the raspberry pi 5 which connects to the camera and parts on other layers
+Camera: Holds the camera in a position to see the entire map around to serve as the eyes of the robot
+Bottom Parts: Includes many different parts which serve to work with the servo and DC motors which control the car
