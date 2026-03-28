@@ -4,6 +4,7 @@
 #include <ctype.h>
 
 Servo servo;
+byte servoPin = 9;
 static int pos = 0;
 static int pulse = 500;
 static char state = 0;
@@ -12,7 +13,7 @@ static size_t lineLen = 0;
 
 void setup() {
     Serial.begin(115200);
-    servo.attach(9, 900, 2100); //Adjusts PWM ranges to fit the HS-5055MG servo
+    servo.attach(servoPin, 900, 2100); //Adjusts PWM ranges to fit the HS-5055MG servo
 }
 
 void loop() {
@@ -31,11 +32,11 @@ void loop() {
             line[lineLen++] = c;
             if (lineLen >= sizeof(line) - 1 || c == '\n') {
                 line[lineLen] = '\0';
-                lineLen = 0;
                 if (state == 'a') {
                     pos = atoi(line);
                     pos = constrain(pos, 0, 180);
-                    servo.write(pos);
+                    pulse = map(pos, 0, 180, 900, 2100);
+                    servo.writeMicroseconds(pulse);
                     Serial.print("Servo position: ");
                     Serial.println(pos);
                 } else if (state == 'b') {

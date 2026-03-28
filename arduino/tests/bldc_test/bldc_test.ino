@@ -1,19 +1,23 @@
 #include <Arduino.h>
 #include <Servo.h>
 #include <stdlib.h>
+#include <math.h>
 #include <ctype.h>
 
-#define ENABLE 9
-static int speed = 50;
-static char word = 0;
+Servo motor;
+byte motorPin = 8;
+static char dir = 0;
 static char line[16];
 static size_t lineLen = 0;
 
 void setup() {
   Serial.begin(115200);
-  pinMode(ENABLE,OUTPUT); // This pin will control motor speed
-  pinMode(4,OUTPUT);
-  pinMode(5,OUTPUT);
+  motor.attach(motorPin, 1000, 2000); // Adjusts PWM ranges to fit the BLDC motor controller
+
+  // ESC arming sequence
+  motor.writeMicroseconds(1500); // Reset motor to neutral
+  delay(3000);
+  Serial.println("ESC armed. Ready to recieve commands.");
 }
 
 void loop() {
@@ -22,23 +26,33 @@ void loop() {
 
     if (c == '\r') continue;
 
-    if (c == 'a' || c == 'b' || c == 's') {
-      word = c;
+    if (c == 'a' || c == 'b') {
+      dir = c;
       lineLen = 0;
       continue;
     }
 
-    if (word) {
+    if (dir) {
       line[lineLen++] = c;
         if (lineLen >= sizeof(line) - 1 || c == '\n') {
           line[lineLen] = '\0';
-          lineLen = 0;
-          if (word == 'a') { //Sets direction
-            digitalWrite(4, HIGH);
-          } else if (word == 'b') { // Sets direction
-            digitalWrite(5, HIGH);
-          } else if (word == 's') { // Sets speed via PWM
-            speed = atoi(line);
-            analogWrite(ENABLE, speed);
+          int speed = atoi(line);
+          if (dir == 'a') { //Sets direction
+            speed = constrain(speed, 1000, 1500);
+          } else if (dir == 'b') { // Sets direction
+            speed = constrain(speed, 1500, 2000);
           }
+          
+          motor.writeMicroseconds(speed);
+
+          Serial.print("Motor direction: ");
+          Serial.println(dir);
+          Serial.print("Motor speed: ");
+          Serial.print(abs(speed - 1500)/5.0);
+          Serial.println("%");
+
+          dir = 0;
+      }
+    }
+  }
 }
