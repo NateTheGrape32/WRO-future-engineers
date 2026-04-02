@@ -65,10 +65,7 @@ def pdController(error, kp=0.1, kd=0.05):
     global prevError
     correction = (kp * error) + (kd * (error - prevError))
     prevError = error
-    ser.write(f"$S{correction}\n")
-
-def turn(side, speed=0.5):
-    pass
+    return correction
 
 # --- Lab threshold for black wall (tune if needed) --- #
 LAB_LOWER = np.array([0, 0, 0], dtype=np.uint8)
@@ -90,6 +87,8 @@ turnEnterTime = None
 enterTurnDegree = None
 turnDegrees = None
 
+turnsCompleted = 0
+
 prevError = 0
 
 mode = "FOLLOW_WALL"
@@ -108,7 +107,7 @@ while True:
 
     # --- Wall Follow --- #
     if mode == "FOLLOW_WALL":
-        pdController(leftArea-rightArea)
+        ser.write(f"$S{pdController(leftArea-rightArea)}\n")
         if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
             confirmCount += 1
         else:
@@ -128,7 +127,6 @@ while True:
     
     # --- Turning --- #
     else:
-        ser.write(f"$T{side}\n") # send turn command to arduino
         delta = abs(enterTurnDegree - int(ser.readline().decode().strip()))
         turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
         elapsed = now - (turnEnterTime if turnEnterTime else now)
@@ -141,6 +139,9 @@ while True:
                 turnEnterTime = None
                 enterTurnDegree = None
                 turnDegrees = None
+                turnsCompleted += 1
+                continue
+        ser.write(f"$T{leftArea-rightArea}\n") # send turn direction for PID correction during turn (negative means turn left and vice versa)
 
     # --- Visualization --- #
     # Draw ROIs and contours
