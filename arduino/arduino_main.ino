@@ -12,6 +12,9 @@ static const char SOC = '$';  // start of command character
 static bool inCommand = false;
 static float biasX = 0.0, biasY = 0.0, biasZ = 0.0;
 Servo servo;
+Servo motor;
+#define SERVO_PIN 9
+#define MOTOR_PIN 8
 
 static void calibrateGyro(float& biasX, float& biasY, float& biasZ) {
   const int samples = 1000;
@@ -36,23 +39,13 @@ static void calibrateGyro(float& biasX, float& biasY, float& biasZ) {
   biasZ /= samples;
 }
 
-void setup() {
-  pinMode(,OUTPUT);
-  pinMode(,OUTPUT);
-  pinMode(,OUTPUT);
-
-  Serial.begin(115200);
-  while (!Serial);
-
-  if (!IMU.begin()) {
-    Serial.println("Failed to initialize IMU!");
-    while (1)
-      ;
-  }
-  Serial.println("IMU initialized successfully.");
-
-  calibrateGyro(biasX, biasY, biasZ);
+static void driveStraight(float correction, int speed=1800) {
+  motor.writeMicroseconds(speed);
+  int pwm = map(correction, -6000, 6000, 900, 2100);  // Limit correction to valid servo angles
+  servo.writeMicroseconds(pwm);
 }
+
+
 
 static void processCommand(char* cmd) {
   if (!cmd || cmd[0] == '\0') return;
@@ -69,37 +62,20 @@ static void processCommand(char* cmd) {
   char* endp = nullptr;
   long val = strtol(cmd, &endp, 10);
 
-  if (endp == cmd) {  // Check for valid turning direction if no digit found
-    if (strcmp("left", cmd) == 0) {
-      val = 1;
-    } else if (strcmp("right", cmd) == 0) {
-      val = -1;
-    } else {
-      return;  // Exit if not a valid command
-    }
-  }
-
   switch (type) {
     case 'S':                            // Set servo position
-      if (val < 0 || val > 180) return;  // Invalid angle
-      servo.write(val);
+      if (val < -6000 || val > 6000) return;  // Invalid angle
+      driveStraight(val);
       break;
     case 'T':  // return IMU data and turn
+      val < 0 ? servo.writeMicroseconds(900) : servo.writeMicroseconds(2100);
+      motor.writeMicroseconds(1600);
       float gx, gy, gz;
       if (IMU.gyroscopeAvailable()) {
         IMU.readGyroscope(gx, gy, gz);
         Serial.println(gx - biasX);
       }
       delay(10);
-      if (val == 1) {
-        Serial.println("Turning left");
-        digitalWrite(, HIGH);
-        digitalWrite(, LOW);
-      } else if (val == -1) {
-        Serial.println("Turning right");
-        digitalWrite(, LOW);
-        digitalWrite(, HIGH);
-      }
       break;
     default:
       // Ignore unknown command type
@@ -107,11 +83,24 @@ static void processCommand(char* cmd) {
   }
 }
 
-void loop() {
-  analogueWrite(, 255);
-  digitalWrite(, HIGH);
-  digitalWrite(, HIGH);
+void setup() {
+  servo.attach(SERVO_PIN, 900, 2100);
+  motor.attach(MOTOR_PIN, 1000, 2000);
 
+  Serial.begin(115200);
+  while (!Serial);
+
+  if (!IMU.begin()) {
+    Serial.println("Failed to initialize IMU!");
+    while (1)
+      ;
+  }
+  Serial.println("IMU initialized successfully.");
+
+  calibrateGyro(biasX, biasY, biasZ);
+}
+
+void loop() {
   while (Serial.available() > 0) {
     char c = (char)Serial.read();
     if (c == SOC) {
