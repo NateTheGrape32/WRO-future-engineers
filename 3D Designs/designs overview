@@ -1,8 +1,8 @@
 Wheel Holder: used to place above a part of the wheels in order to prevent them from going up and allowing the body of the robot from touching the ground when placed of the floor(initial design)
 Wheel Holder2: improved version of the wheel holder, expanded sideways and slightly downwards to better fit and hold the wheels.
-Battery & Arduino: 2nd layer, holds both the battery and Arduino Nano which connect to the other layers
-RaspberryPi: 3rd layer, holds the raspberry pi 5 which connects to the camera and parts on other layers
-Camera: Holds the camera in a position to see the entire map around to serve as the eyes of the robot
+Battery & Arduino: 2nd layer, holds both the battery and Arduino Nano which connect to the other layers(limited space for the arduino.
+RaspberryPi: 3rd layer, holds the raspberry pi 5 which connects to the camera and parts on other layers(flimsy legs, to be resolved. We don't have long enough screws to hold the raspberry pi in place)
+Camera: Holds the camera in a position to see the entire map around to serve as the eyes of the robot(not sure if the camera will work, may need to change the positions of the holes later)
 Bottom Parts: Includes many different parts which serve to work with the servo and DC motors which control the car. Two of the parts found in this 3D model required remodeling. They have been added as seoaret parts named steering and motor holder.
 Steering: a piece that connects the two wheels and the servo motor and is used for steering
 Motor Holder: a piece that holds the DC motor in the air so that the gear on it connects to the gear that turns the back wheels.
