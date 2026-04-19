@@ -13,7 +13,7 @@ picam2.configure("preview")
 picam2.start()
 sleep(2)  # Allow camera to warm up and arduino port to boot
 
-ser = serial.Serial('/dev/ttyACM0', 112500, timeout=1)  # Update with your Arduino's port
+ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)  # Update with your Arduino's port
 ser.reset_input_buffer()  # Clear any pending input/output
 ser.reset_output_buffer()
 
@@ -74,8 +74,8 @@ LAB_UPPER = np.array([70, 255, 255], dtype=np.uint8)
 # --- Turning state reqs --- #
 ENTER_TURN_THRESH = 550  # area threshold to enter turning zone
 EXIT_TURN_THRESH = 1200   # area threshold to exit turning zone
-EXIT_TIME_THRESH = 10.0
 EXIT_ANGLE_THRESH = 90.0 # minimum turn angle before allowing exit (prevents false exits from small turns or noise)
+EXIT_TIME_THRESH = 2.5
 
 # --- False trigger prevention --- #
 CONFIRM_FRAMES = 5  # number of consecutive frames to confirm turn
@@ -91,91 +91,115 @@ turnsCompleted = 0
 
 prevError = 0
 
+data = None # general data recieved from Arduino
+
 mode = "FOLLOW_WALL"
 
 # --- Main Loop --- #
-while True:
-    frame = picam2.capture_array()
-
-    now = time.monotonic()
-
-    # Detect ROIs
-    leftContour, leftMask, leftArea = findWallAreaLab(frame, roi1, LAB_LOWER, LAB_UPPER)
-    rightContour, rightMask, rightArea = findWallAreaLab(frame, roi2, LAB_LOWER, LAB_UPPER)
-
-    # --- Driving States --- #
-
-    # --- Wall Follow --- #
-    if mode == "FOLLOW_WALL":
-        ser.write(f"$S{pdController(leftArea-rightArea)}\n")
-        if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
-            confirmCount += 1
-        else:
-            confirmCount = 0
-        
-        if confirmCount >= CONFIRM_FRAMES:
-            if leftArea < rightArea:
-                side = "left"
-            elif rightArea < leftArea:
-                side = "right"
-            else:
-                side = "both"
-            confirmCount = 0
-            mode = "TURNING"
-            turnEnterTime = now
-            enterTurnAngle = int(ser.readline().decode().strip())
+try:
+    while True:
+        frame = picam2.capture_array()
     
-    # --- Turning --- #
-    else:
-        delta = abs(enterTurnDegree - int(ser.readline().decode().strip()))
-        turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
-        elapsed = now - (turnEnterTime if turnEnterTime else now)
-        if elapsed >= EXIT_TIME_THRESH and turnDegrees > EXIT_ANGLE_THRESH: # minimum time & turn angle before exit
-            if (side == "both" and leftArea > EXIT_TURN_THRESH and rightArea > EXIT_TURN_THRESH)\
-                or (side == "left" and leftArea > EXIT_TURN_THRESH)\
-                or (side == "right" and rightArea > EXIT_TURN_THRESH): # check if wall seen again
-                mode = "FOLLOW_WALL"
-                side = None
-                turnEnterTime = None
-                enterTurnDegree = None
-                turnDegrees = None
-                turnsCompleted += 1
-                continue
-        ser.write(f"$T{leftArea-rightArea}\n") # send turn direction for PID correction during turn (negative means turn left and vice versa)
-
-    # --- Visualization --- #
-    # Draw ROIs and contours
-    drawRoi(frame, roi1, label="Left ROI")
-    drawRoi(frame, roi2, label="Right ROI")
-
-    # Draw contours if found
-    if leftContour is not None:
-        cv2.drawContours(frame, [leftContour], -1, (0, 255, 255), 2)
-    if rightContour is not None:
-        cv2.drawContours(frame, [rightContour], -1, (0, 255, 255), 2)
-
-    # show numeric values
-    cv2.putText(frame, f"Left Area: {leftArea}", (roi1[0], roi1[1] - 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(frame, f"Right Area: {rightArea}", (roi2[0], roi2[1] - 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(frame, f"Confirm Count: {confirmCount}", (roi1[0], 90),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-    cv2.putText(frame, f"Elapsed Time Since Turn Enter: {now - (turnEnterTime if turnEnterTime else now):.2f}s", (roi1[0], roi1[3]+30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
-    # show mode
-    cv2.putText(frame, f"Mode: {mode}", (roi1[0], 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-    cv2.putText(frame, f"Turn Side: {side}", (roi1[0], 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
-    # Display results
-    cv2.imshow("Frame", frame)
-    cv2.imshow("Mask ROI 1", leftMask)
-    cv2.imshow("Mask ROI 2", rightMask)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-cv2.destroyAllWindows()
-picam2.stop()
+        now = time.monotonic()
+    
+        mode = "END" if turnsCompleted >= 12
+    
+        # Detect ROIs
+        leftContour, leftMask, leftArea = findWallAreaLab(frame, roi1, LAB_LOWER, LAB_UPPER)
+        rightContour, rightMask, rightArea = findWallAreaLab(frame, roi2, LAB_LOWER, LAB_UPPER)
+    
+        # --- Driving States --- #
+    
+        # --- Wall Follow --- #
+        if mode == "FOLLOW_WALL":
+            fix = (leftArea-rightArea)/(roi1[2]-roi[1]*roi1[3]-roi1[2]) * 1500
+            ser.write(f"$S{pdController(fix)}\n")
+            if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
+                confirmCount += 1
+            else:
+                confirmCount = 0
+            
+            if confirmCount >= CONFIRM_FRAMES:
+                if leftArea < rightArea:
+                    side = "left"
+                elif rightArea < leftArea:
+                    side = "right"
+                else:
+                    side = "both"
+                confirmCount = 0
+                mode = "TURNING"
+                turnEnterTime = now
+                data = int(ser.readline().decode().strip()) if ser.in_waiting > 0
+                delta = 0
+                enterTurnDegree = data
+                ser.write("$M1600")
+        
+        # --- Turning --- #
+        elif mode == "TURNING":
+            data = int(ser.readline().decode().strip())) if ser.in_waiting > 0
+            delta = abs(enterTurnDegree - data) if data else delta 
+            turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
+            elapsed = now - (turnEnterTime if turnEnterTime else now)
+            if elapsed >= EXIT_TIME_THRESH and turnDegrees > EXIT_ANGLE_THRESH: # minimum turn angle before exit
+                if (side == "both" and leftArea > EXIT_TURN_THRESH and rightArea > EXIT_TURN_THRESH)\
+                    or (side == "left" and leftArea > EXIT_TURN_THRESH)\
+                    or (side == "right" and rightArea > EXIT_TURN_THRESH): # check if wall seen again
+                    mode = "FOLLOW_WALL"
+                    side = None
+                    turnEnterTime = None
+                    enterTurnDegree = None
+                    turnDegrees = None
+                    turnsCompleted += 1
+                    continue
+                    
+            ser.write(f"$I") # send turn direction for PD correction during turn (negative means turn left and vice versa)
+    
+        # --- End --- #
+        else:
+            ser.write(f"$E")
+            break
+    
+        # --- Visualization --- #
+        # Draw ROIs and contours
+        drawRoi(frame, roi1, label="Left ROI")
+        drawRoi(frame, roi2, label="Right ROI")
+    
+        # Draw contours if found
+        if leftContour is not None:
+            cv2.drawContours(frame, [leftContour], -1, (0, 255, 255), 2)
+        if rightContour is not None:
+            cv2.drawContours(frame, [rightContour], -1, (0, 255, 255), 2)
+    
+        # show numeric values
+        cv2.putText(frame, f"Left Area: {leftArea}", (roi1[0], roi1[1] - 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(frame, f"Right Area: {rightArea}", (roi2[0], roi2[1] - 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(frame, f"Confirm Count: {confirmCount}", (roi1[0], 90),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, f"Elapsed Time Since Turn Enter: {now - (turnEnterTime if turnEnterTime else now):.2f}s", (roi1[0], roi1[3]+30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    
+        # show mode
+        cv2.putText(frame, f"Mode: {mode}", (roi1[0], 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, f"Turn Side: {side}", (roi1[0], 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    
+        # Display results
+        cv2.imshow("Frame", frame)
+        cv2.imshow("Mask ROI 1", leftMask)
+        cv2.imshow("Mask ROI 2", rightMask)
+    
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()
+    picam2.stop()
+    
+finally:
+    ser.write(f'$M1500')
+    sleep(1) # wait for Arduino to process cmd
+    ser.write(f'$S1500')
+    cv2.destroyAllWindows()
+    picam2.stop()
+    arduino.close()
