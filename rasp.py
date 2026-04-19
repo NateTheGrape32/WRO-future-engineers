@@ -97,6 +97,7 @@ mode = "FOLLOW_WALL"
 
 # --- Main Loop --- #
 try:
+    ser.write('$M1800')
     while True:
         frame = picam2.capture_array()
     
@@ -112,8 +113,15 @@ try:
     
         # --- Wall Follow --- #
         if mode == "FOLLOW_WALL":
-            fix = (leftArea-rightArea)/(roi1[2]-roi[1]*roi1[3]-roi1[2]) * 1500
-            ser.write(f"$S{pdController(fix)}\n")
+            ser.write('$D')
+            data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else 90
+            correction = pdController((leftArea-rightArea)/(roi1[2]-roi[1]*roi1[3]-roi1[2]) * 180)
+            fix = data + correction
+            if fix < 0:
+                fix = 0
+            if fix > 180:
+                fix = 180
+            ser.write(f"$S{fix}\n")
             if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
                 confirmCount += 1
             else:
@@ -122,13 +130,16 @@ try:
             if confirmCount >= CONFIRM_FRAMES:
                 if leftArea < rightArea:
                     side = "left"
+                    ser.write('$S0')
                 elif rightArea < leftArea:
                     side = "right"
+                    ser.write('$S180')
                 else:
                     side = "both"
                 confirmCount = 0
                 mode = "TURNING"
                 turnEnterTime = now
+                ser.write('$I')
                 data = int(ser.readline().decode().strip()) if ser.in_waiting > 0
                 delta = 0
                 enterTurnDegree = data
