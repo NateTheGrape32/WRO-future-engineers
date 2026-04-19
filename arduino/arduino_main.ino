@@ -39,14 +39,6 @@ static void calibrateGyro(float& biasX, float& biasY, float& biasZ) {
   biasZ /= samples;
 }
 
-static void driveStraight(float correction, int speed=1800) {
-  motor.writeMicroseconds(speed);
-  int pwm = map(correction, -6000, 6000, 900, 2100);  // Limit correction to valid servo angles
-  servo.writeMicroseconds(pwm);
-}
-
-
-
 static void processCommand(char* cmd) {
   if (!cmd || cmd[0] == '\0') return;
 
@@ -64,18 +56,22 @@ static void processCommand(char* cmd) {
 
   switch (type) {
     case 'S':                            // Set servo position
-      if (val < -6000 || val > 6000) return;  // Invalid angle
-      driveStraight(val);
+      if (val < 0 || val > 180) return;  // Invalid angle
+      servo.writeMicroseconds(val);
       break;
-    case 'T':  // return IMU data and turn
-      val < 0 ? servo.writeMicroseconds(900) : servo.writeMicroseconds(2100);
-      motor.writeMicroseconds(1600);
+    case 'M':  // return IMU data and turn
+      if (val < 1000 || val > 2000) return;  // Invalid speed
+      motor.writeMicroseconds(val);
+      break;
+    case 'I':
       float gx, gy, gz;
       if (IMU.gyroscopeAvailable()) {
-        IMU.readGyroscope(gx, gy, gz);
+        IMU.readyGyroscope(gx, gy, gz);
         Serial.println(gx - biasX);
       }
-      delay(10);
+      break;
+    case 'D':
+      Serial.println(servo.read());
       break;
     default:
       // Ignore unknown command type
@@ -86,6 +82,8 @@ static void processCommand(char* cmd) {
 void setup() {
   servo.attach(SERVO_PIN, 900, 2100);
   motor.attach(MOTOR_PIN, 1000, 2000);
+  servo.write(90);
+  motor.writeMicroseconds(1500);
 
   Serial.begin(115200);
   while (!Serial);
