@@ -5,4 +5,5 @@ RaspberryPi: 3rd layer, holds the raspberry pi 5 which connects to the camera an
 Camera: Holds the camera in a position to see the entire map around to serve as the eyes of the robot(not sure if the camera will work, may need to change the positions of the holes later)
 Bottom Parts: Includes many different parts which serve to work with the servo and DC motors which control the car. Two of the parts found in this 3D model required remodeling. They have been added as seoaret parts named steering and motor holder.
 Steering: a piece that connects the two wheels and the servo motor and is used for steering
-Motor Holder: a piece that holds the DC motor in the air so that the gear on it connects to the gear that turns the back wheels.
+Gear Holder: a piece that holds the DC motor in the air so that the gear on it connects to the gear that turns the back wheels.(the holes were very slightly too far so unable to hold the motor in place)
+Gear Holder2: improved with closer holes to hold the motor so that the gears can connect.
