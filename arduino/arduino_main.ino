@@ -57,7 +57,7 @@ static void processCommand(char* cmd) {
   switch (type) {
     case 'S':                            // Set servo position
       if (val < 0 || val > 180) return;  // Invalid angle
-      servo.writeMicroseconds(val);
+      servo.write(val);
       break;
     case 'M':  // return IMU data and turn
       if (val < 1000 || val > 2000) return;  // Invalid speed
