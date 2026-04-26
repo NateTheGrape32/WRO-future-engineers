@@ -66,12 +66,9 @@ static void processCommand(char* cmd) {
     case 'I':
       float gx, gy, gz;
       if (IMU.gyroscopeAvailable()) {
-        IMU.readyGyroscope(gx, gy, gz);
+        IMU.readGyroscope(gx, gy, gz);
         Serial.println(gx - biasX);
       }
-      break;
-    case 'D':
-      Serial.println(servo.read());
       break;
     default:
       // Ignore unknown command type
@@ -104,6 +101,7 @@ void loop() {
     if (c == SOC) {
       inCommand = true;
       lineLen = 0;
+      continue;
     }
     if (inCommand) {
       if (c == '\n') {

@@ -11,7 +11,7 @@ picam2.preview_configuration.controls.FrameRate = 30
 picam2.preview_configuration.align()
 picam2.configure("preview")
 picam2.start()
-sleep(2)  # Allow camera to warm up and arduino port to boot
+sleep(6)  # Allow camera to warm up and arduino port to boot
 
 ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)  # Update with your Arduino's port
 ser.reset_input_buffer()  # Clear any pending input/output
@@ -64,8 +64,21 @@ def findWallAreaLab(frameRgb, roi, labLower, labUpper, minContourArea=50):
 def pdController(error, kp=0.1, kd=0.05):
     global prevError
     correction = (kp * error) + (kd * (error - prevError))
+    correction = correction * 90 + 180
+    correction = clamp(correction)
     prevError = error
     return correction
+
+def clamp(value, minVal=0, maxVal=180):
+    return max(minVal, min(maxVal, value))
+
+def finish():
+    ser.write(b'$M1500\n')
+    sleep(1) # wait for Arduino to process cmd
+    ser.write(b'$S180\n')
+    cv2.destroyAllWindows()
+    picam2.stop()
+    ser.close()
 
 # --- Lab threshold for black wall (tune if needed) --- #
 LAB_LOWER = np.array([0, 0, 0], dtype=np.uint8)
@@ -89,7 +102,10 @@ turnDegrees = None
 
 turnsCompleted = 0
 
+# --- PD control variables --- #
 prevError = 0
+error = 0
+roiArea = (roi1[2]-roi1[0]) * (roi1[3]-roi1[1]) # area of each ROI (same size)
 
 data = None # general data recieved from Arduino
 
@@ -97,13 +113,13 @@ mode = "FOLLOW_WALL"
 
 # --- Main Loop --- #
 try:
-    ser.write('$M1800')
+    ser.write(b'$M1800\n')
     while True:
         frame = picam2.capture_array()
     
         now = time.monotonic()
     
-        mode = "END" if turnsCompleted >= 12
+        mode = "END" if turnsCompleted >= 12 else mode
     
         # Detect ROIs
         leftContour, leftMask, leftArea = findWallAreaLab(frame, roi1, LAB_LOWER, LAB_UPPER)
@@ -113,15 +129,11 @@ try:
     
         # --- Wall Follow --- #
         if mode == "FOLLOW_WALL":
-            ser.write('$D')
             data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else 90
-            correction = pdController((leftArea-rightArea)/(roi1[2]-roi[1]*roi1[3]-roi1[2]) * 180)
-            fix = data + correction
-            if fix < 0:
-                fix = 0
-            if fix > 180:
-                fix = 180
-            ser.write(f"$S{fix}\n")
+            error = (leftArea - rightArea) / roiArea  # error is the normalized difference in wall area between left and right ROIs
+            correction = pdController(error)
+            ser.write(b"$S{correction}\n")
+            
             if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
                 confirmCount += 1
             else:
@@ -130,24 +142,24 @@ try:
             if confirmCount >= CONFIRM_FRAMES:
                 if leftArea < rightArea:
                     side = "left"
-                    ser.write('$S0')
+                    ser.write(b'$S0\n')
                 elif rightArea < leftArea:
                     side = "right"
-                    ser.write('$S180')
+                    ser.write(b'$S180\n')
                 else:
                     side = "both"
                 confirmCount = 0
                 mode = "TURNING"
                 turnEnterTime = now
-                ser.write('$I')
-                data = int(ser.readline().decode().strip()) if ser.in_waiting > 0
+                ser.write(b'$I\n')
+                data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else data
                 delta = 0
                 enterTurnDegree = data
-                ser.write("$M1600")
+                ser.write(b"$M1600\n")
         
         # --- Turning --- #
         elif mode == "TURNING":
-            data = int(ser.readline().decode().strip())) if ser.in_waiting > 0
+            data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else data
             delta = abs(enterTurnDegree - data) if data else delta 
             turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
             elapsed = now - (turnEnterTime if turnEnterTime else now)
@@ -161,13 +173,15 @@ try:
                     enterTurnDegree = None
                     turnDegrees = None
                     turnsCompleted += 1
+                    error = 0
+                    prevError = 0
                     continue
                     
-            ser.write(f"$I") # send turn direction for PD correction during turn (negative means turn left and vice versa)
+            ser.write(b"$I\n") # send turn direction for PD correction during turn (negative means turn left and vice versa)
     
         # --- End --- #
         else:
-            ser.write(f"$E")
+            finish()
             break
     
         # --- Visualization --- #
@@ -208,9 +222,4 @@ try:
     picam2.stop()
     
 finally:
-    ser.write(f'$M1500')
-    sleep(1) # wait for Arduino to process cmd
-    ser.write(f'$S1500')
-    cv2.destroyAllWindows()
-    picam2.stop()
-    arduino.close()
+    finish()
