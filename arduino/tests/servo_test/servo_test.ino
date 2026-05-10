@@ -35,8 +35,8 @@ void loop() {
                 if (state == 'a') {
                     pos = atoi(line);
                     pos = constrain(pos, 0, 180);
-                    pulse = map(pos, 0, 180, 900, 2100);
-                    servo.writeMicroseconds(pulse);
+                    //pulse = map(pos, 0, 180, 900, 2100);
+                    servo.write(pos);
                     Serial.print("Servo position: ");
                     Serial.println(pos);
                 } else if (state == 'b') {

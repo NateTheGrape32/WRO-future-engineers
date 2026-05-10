@@ -24,8 +24,8 @@ static bool inCommand = false;
 static float biasX = 0.0, biasY = 0.0, biasZ = 0.0;
 Servo servo;
 Servo motor;
-#define SERVO_PIN 9
-#define MOTOR_PIN 8
+#define SERVO_PIN 8
+#define MOTOR_PIN 9
 
 #define DECLINATION_DEG  -10.1f
 
@@ -196,50 +196,45 @@ static void processCommand(char* cmd) {
   char* endp = nullptr;
   long val = strtol(cmd, &endp, 10);
 
-  switch (type) {
-    case 'S':                            // Set servo position
-      if (val < 0 || val > 180) return;  // Invalid angle
+  if (type == 'S') {                            // Set servo position
+      if (val < 25 || val > 130) return;  // Invalid angle
+      Serial.println(val);
       servo.write(val);
-      break;
-    case 'M':  // return IMU data and turn
-      if (val < 1000 || val > 2000) return;  // Invalid speed
-      motor.writeMicroseconds(val);
-      break;
-    case 'I':
-      unsigned long now = micros();
-      float dt = (now-lastTime)*1e-6f;
-      if (dt < 0.002f) return;
-      lastTime = now;
-      if (dt > 0.05f) dt = 0.05f;
+  } else if (type == 'M') {  // return IMU data and turn
+    if (val < 1000 || val > 2000) return;  // Invalid speed
+    motor.writeMicroseconds(val);
+    Serial.println(val);
+  } /*else if (type == 'I') {
+    unsigned long now = micros();
+    float dt = (now-lastTime)*1e-6f;
+    if (dt < 0.002f) return;
+    lastTime = now;
+    if (dt > 0.05f) dt = 0.05f;
 
-      readAndFuse(dt);
+    readAndFuse(dt);
 
-      // rotate by reference quaternion so output is relative to startup pose
-      float rq0 = r0*q0 - r1*q1 - r2*q2 - r3*q3;
-      float rq1 = r0*q1 + r1*q0 + r2*q3 - r3*q2;
-      float rq2 = r0*q2 - r1*q3 + r2*q0 + r3*q1;
-      float rq3 = r0*q3 + r1*q2 - r2*q1 + r3*q0;
+    // rotate by reference quaternion so output is relative to startup pose
+    float rq0 = r0*q0 - r1*q1 - r2*q2 - r3*q3;
+    float rq1 = r0*q1 + r1*q0 + r2*q3 - r3*q2;
+    float rq2 = r0*q2 - r1*q3 + r2*q0 + r3*q1;
+    float rq3 = r0*q3 + r1*q2 - r2*q1 + r3*q0;
 
-      float roll    = atan2f(2*(rq0*rq1+rq2*rq3), 1-2*(rq1*rq1+rq2*rq2)) * RAD_TO_DEG;
-      float pitch   = asinf (constrain(2*(rq0*rq2-rq3*rq1), -1.0f, 1.0f)) * RAD_TO_DEG;
-      float heading = atan2f(2*(rq0*rq3+rq1*rq2), 1-2*(rq2*rq2+rq3*rq3)) * RAD_TO_DEG;
+    float roll    = atan2f(2*(rq0*rq1+rq2*rq3), 1-2*(rq1*rq1+rq2*rq2)) * RAD_TO_DEG;
+    float pitch   = asinf (constrain(2*(rq0*rq2-rq3*rq1), -1.0f, 1.0f)) * RAD_TO_DEG;
+    float heading = atan2f(2*(rq0*rq3+rq1*rq2), 1-2*(rq2*rq2+rq3*rq3)) * RAD_TO_DEG;
 
-      // Y axis = forward
-      heading += DECLINATION_DEG - 90.0f;
-      if (heading < 0)   heading += 360.0f;
-      if (heading > 360) heading -= 360.0f;
-      Serial.println(heading + 90.0f, 4)
-      break;
-    default:
-      // Ignore unknown command type
-      break;
-  }
+    // Y axis = forward
+    heading += DECLINATION_DEG - 90.0f;
+    if (heading < 0)   heading += 360.0f;
+    if (heading > 360) heading -= 360.0f;
+    Serial.println(heading + 90.0f, 4);
+  } */
 }
 
 void setup() {
   servo.attach(SERVO_PIN, 900, 2100);
   motor.attach(MOTOR_PIN, 1000, 2000);
-  servo.write(90);
+  servo.write(80);
   motor.writeMicroseconds(1500);
 
   Serial.begin(115200);
@@ -252,7 +247,7 @@ void setup() {
   Serial.println("IMU initialized successfully.");
 
   // uncomment once to get mag offsets, paste above, then comment out again
-  calibrateMag();
+  //calibrateMag();
 
   calibrateGyro();
   warmupAndZero();

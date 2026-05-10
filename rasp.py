@@ -73,7 +73,7 @@ def clamp(value, minVal=0, maxVal=180):
     return max(minVal, min(maxVal, value))
 
 def finish():
-    ser.write(b'$M1500\n')
+    #ser.write(b'$M1500\n')
     sleep(1) # wait for Arduino to process cmd
     ser.write(b'$S180\n')
     cv2.destroyAllWindows()
@@ -113,7 +113,7 @@ mode = "FOLLOW_WALL"
 
 # --- Main Loop --- #
 try:
-    ser.write(b'$M1800\n')
+    #ser.write(b'$M1800\n')
     while True:
         frame = picam2.capture_array()
     
@@ -151,19 +151,19 @@ try:
                 confirmCount = 0
                 mode = "TURNING"
                 turnEnterTime = now
-                ser.write(b'$I\n')
-                data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else data
-                delta = 0
-                enterTurnDegree = data
-                ser.write(b"$M1600\n")
+                #ser.write(b'$I\n')
+                #data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else data
+                #delta = 0
+                #enterTurnDegree = data
+                #ser.write(b"$M1600\n")
         
         # --- Turning --- #
         elif mode == "TURNING":
-            data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else data
-            delta = abs(enterTurnDegree - data) if data else delta 
-            turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
+            #data = int(ser.readline().decode().strip()) if ser.in_waiting > 0 else data
+            #delta = abs(enterTurnDegree - data) if data else delta 
+            #turnDegrees = min(delta, 360 - delta) # handle wraparound from 0 to 360
             elapsed = now - (turnEnterTime if turnEnterTime else now)
-            if elapsed >= EXIT_TIME_THRESH and turnDegrees > EXIT_ANGLE_THRESH: # minimum turn angle before exit
+            if elapsed >= EXIT_TIME_THRESH: #and turnDegrees > EXIT_ANGLE_THRESH: # minimum turn angle before exit
                 if (side == "both" and leftArea > EXIT_TURN_THRESH and rightArea > EXIT_TURN_THRESH)\
                     or (side == "left" and leftArea > EXIT_TURN_THRESH)\
                     or (side == "right" and rightArea > EXIT_TURN_THRESH): # check if wall seen again
@@ -177,7 +177,7 @@ try:
                     prevError = 0
                     continue
                     
-            ser.write(b"$I\n") # send turn direction for PD correction during turn (negative means turn left and vice versa)
+            #ser.write(b"$I\n") # send turn direction for PD correction during turn (negative means turn left and vice versa)
     
         # --- End --- #
         else:
