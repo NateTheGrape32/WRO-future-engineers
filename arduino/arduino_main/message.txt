@@ -1,0 +1,263 @@
+#include <Arduino.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
+#include <Servo.h>
+
+// =========================
+// Quaternion / IMU Variables
+// =========================
+
+static float q0 = 1, q1 = 0, q2 = 0, q3 = 0;
+static float eIx = 0, eIy = 0, eIz = 0;
+static unsigned long lastTime = 0;
+static float gbx = 0, gby = 0, gbz = 0;
+
+// Reference quaternion
+static float r0 = 1, r1 = 0, r2 = 0, r3 = 0;
+
+// Cached magnetometer
+static float cachedMx = 0, cachedMy = 0, cachedMz = 0;
+
+// =========================
+// Serial Command Parser
+// =========================
+
+static const size_t MAX_LINE = 64;
+static char lineBuf[MAX_LINE + 1];
+static size_t lineLen = 0;
+
+static const char SOC = '$';
+static bool inCommand = false;
+
+// =========================
+// Servo / Motor
+// =========================
+
+Servo servo;
+Servo motor;
+
+#define SERVO_PIN 8
+#define MOTOR_PIN 9
+
+// =========================
+// IMU Settings
+// =========================
+
+#define DECLINATION_DEG -10.1f
+
+#define MAG_X_OFFSET 39.0f
+#define MAG_Y_OFFSET 30.0f
+#define MAG_Z_OFFSET 13.5f
+
+#define Kp 2.0f
+#define Ki 0.05f
+
+// =========================
+// Mahony Filter
+// =========================
+
+void mahonyUpdate(float ax, float ay, float az,
+                  float gx, float gy, float gz,
+                  float mx, float my, float mz,
+                  float dt) {
+
+  float norm;
+
+  norm = sqrtf(ax * ax + ay * ay + az * az);
+  if (norm == 0) return;
+
+  ax /= norm;
+  ay /= norm;
+  az /= norm;
+
+  norm = sqrtf(mx * mx + my * my + mz * mz);
+  if (norm == 0) return;
+
+  mx /= norm;
+  my /= norm;
+  mz /= norm;
+
+  float hx = 2 * (mx * (0.5f - q2 * q2 - q3 * q3) +
+                  my * (q1 * q2 - q0 * q3) +
+                  mz * (q1 * q3 + q0 * q2));
+
+  float hy = 2 * (mx * (q1 * q2 + q0 * q3) +
+                  my * (0.5f - q1 * q1 - q3 * q3) +
+                  mz * (q2 * q3 - q0 * q1));
+
+  float bx = sqrtf(hx * hx + hy * hy);
+
+  float bz = 2 * (mx * (q1 * q3 - q0 * q2) +
+                  my * (q2 * q3 + q0 * q1) +
+                  mz * (0.5f - q1 * q1 - q2 * q2));
+
+  float vx = 2 * (q1 * q3 - q0 * q2);
+  float vy = 2 * (q0 * q1 + q2 * q3);
+  float vz = q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3;
+
+  float wx = 2 * (bx * (0.5f - q2 * q2 - q3 * q3) +
+                  bz * (q1 * q3 - q0 * q2));
+
+  float wy = 2 * (bx * (q1 * q2 - q0 * q3) +
+                  bz * (q0 * q1 + q2 * q3));
+
+  float wz = 2 * (bx * (q0 * q2 + q1 * q3) +
+                  bz * (0.5f - q1 * q1 - q2 * q2));
+
+  float ex = (ay * vz - az * vy) + (my * wz - mz * wy);
+  float ey = (az * vx - ax * vz) + (mz * wx - mx * wz);
+  float ez = (ax * vy - ay * vx) + (mx * wy - my * wx);
+
+  eIx += Ki * ex * dt;
+  eIy += Ki * ey * dt;
+  eIz += Ki * ez * dt;
+
+  gx += Kp * ex + eIx;
+  gy += Kp * ey + eIy;
+  gz += Kp * ez + eIz;
+
+  gx *= DEG_TO_RAD;
+  gy *= DEG_TO_RAD;
+  gz *= DEG_TO_RAD;
+
+  float dq0 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz) * dt;
+  float dq1 = 0.5f * ( q0 * gx + q2 * gz - q3 * gy) * dt;
+  float dq2 = 0.5f * ( q0 * gy - q1 * gz + q3 * gx) * dt;
+  float dq3 = 0.5f * ( q0 * gz + q1 * gy - q2 * gx) * dt;
+
+  q0 += dq0;
+  q1 += dq1;
+  q2 += dq2;
+  q3 += dq3;
+
+  norm = sqrtf(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+
+  q0 /= norm;
+  q1 /= norm;
+  q2 /= norm;
+  q3 /= norm;
+}
+
+// =========================
+// Command Processing
+// =========================
+
+static void processCommand(char *cmd) {
+
+  if (!cmd || cmd[0] == '\0') return;
+
+  char *cr = strchr(cmd, '\r');
+  if (cr) *cr = '\0';
+
+  while (*cmd && isspace((unsigned char)*cmd)) {
+    cmd++;
+  }
+
+  if (*cmd == '\0') return;
+
+  char type = *cmd++;
+
+  char *endp = nullptr;
+  long val = strtol(cmd, &endp, 10);
+
+  // =========================
+  // Servo Command
+  // Example: $S90
+  // =========================
+
+  if (type == 'S') {
+
+    if (val < 25 || val > 130) return;
+
+    servo.write(val);
+
+    Serial.print("Servo: ");
+    Serial.println(val);
+  }
+
+  // =========================
+  // Motor Command
+  // Example: $M1500
+  // =========================
+
+  else if (type == 'M') {
+
+    if (val < 1000 || val > 2000) return;
+
+    motor.writeMicroseconds(val);
+
+    Serial.print("Motor: ");
+    Serial.println(val);
+  }
+}
+
+// =========================
+// Setup
+// =========================
+
+void setup() {
+
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  servo.attach(SERVO_PIN, 900, 2100);
+  motor.attach(MOTOR_PIN, 1000, 2000);
+
+  servo.write(80);
+  motor.writeMicroseconds(1500);
+
+  Serial.begin(115200);
+
+  while (!Serial);
+
+  Serial.println("System Ready");
+}
+
+// =========================
+// Main Loop
+// =========================
+
+void loop() {
+
+  while (Serial.available() > 0) {
+
+    char c = (char)Serial.read();
+
+    // Start Of Command
+    if (c == SOC) {
+
+      inCommand = true;
+      lineLen = 0;
+
+      continue;
+    }
+
+    if (inCommand) {
+
+      // End of line
+      if (c == '\n') {
+
+        lineBuf[lineLen] = '\0';
+
+        processCommand(lineBuf);
+
+        inCommand = false;
+        lineLen = 0;
+
+        continue;
+      }
+
+      // Append char
+      if (lineLen < MAX_LINE - 1) {
+
+        lineBuf[lineLen++] = c;
+      }
+      else {
+
+        // Overflow protection
+        inCommand = false;
+        lineLen = 0;
+      }
+    }
+  }
+}
