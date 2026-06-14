@@ -199,11 +199,11 @@ static void processCommand(char* cmd) {
   if (type == 'S') {                            // Set servo position
       if (val < 25 || val > 130) return;  // Invalid angle
       Serial.println(val);
-      servo.write(val);
+      //servo.write(val);
   } else if (type == 'M') {  // return IMU data and turn
     if (val < 1000 || val > 2000) return;  // Invalid speed
     motor.writeMicroseconds(val);
-    Serial.println(val);
+    //Serial.println(val);
   } /*else if (type == 'I') {
     unsigned long now = micros();
     float dt = (now-lastTime)*1e-6f;
@@ -241,10 +241,10 @@ void setup() {
   while (!Serial);
 
   if (!IMU.begin()) {
-    Serial.println("Failed to initialize IMU!");
+    //Serial.println("Failed to initialize IMU!");
     while (1);
   }
-  Serial.println("IMU initialized successfully.");
+  //Serial.println("IMU initialized successfully.");
 
   // uncomment once to get mag offsets, paste above, then comment out again
   //calibrateMag();
