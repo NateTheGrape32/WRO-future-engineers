@@ -249,6 +249,8 @@ while True:
 
         send_servo(steering)
 
+        print(f"$L{22}".encode())
+
         if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
             confirmCount += 1
         else:
@@ -272,6 +274,8 @@ while True:
             confirmCount = 0
 
     elif mode == "TURNING":
+
+        print(f"$L{23}".encode())
 
         elapsed = now - turnEnterTime
 
