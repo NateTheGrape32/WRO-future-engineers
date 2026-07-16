@@ -29,6 +29,8 @@ EXIT_TURN_THRESH = 4000
 CONFIRM_FRAMES = 5
 EXIT_TIME_THRESH = 0.75
 
+EXIT_ANGLE_THRESH = 80
+
 BLUE_LOWER = np.array([95,80,80])
 BLUE_UPPER = np.array([130,255,255])
 
@@ -59,6 +61,8 @@ turnSide = None
 confirmCount = 0
 turnEnterTime = None
 turnsCompleted = 0
+enterHeading = None
+currentHeading = None
 
 lineCount = 0
 linePresent = False
@@ -272,6 +276,10 @@ while True:
             mode = "TURNING"
             turnEnterTime = now
             confirmCount = 0
+            print(f"$I".encode())
+            if ser.in_waiting > 0:
+                enterHeading = float(ser.readline().decode().strip())
+            print(enterHeading)
 
     elif mode == "TURNING":
 
@@ -292,11 +300,17 @@ while True:
         )
 
         if elapsed > EXIT_TIME_THRESH and wallSeenAgain:
-            mode = "FOLLOW_WALL"
-            turnSide = None
-            turnEnterTime = None
-            prevError = 0
-            turnsCompleted += 1
+            if ser.in_waiting > 0:
+                currentHeading = float(ser.readline().decode().strip())
+                print(currentHeading)
+            if abs(currentHeading - enterHeading) >= EXIT_ANGLE_THRESH:
+                mode = "FOLLOW_WALL"
+                turnSide = None
+                turnEnterTime = None
+                prevError = 0
+                turnsCompleted += 1
+                currentHeading = None
+                enterHeading = None
 
     draw_roi(frame, ROI_LEFT, "LEFT")
     draw_roi(frame, ROI_RIGHT, "RIGHT")

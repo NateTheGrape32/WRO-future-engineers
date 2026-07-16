@@ -36,6 +36,8 @@ Servo motor;
 #define Kp  2.0f
 #define Ki  0.05f
 
+static float heading = 0.0f;
+
 void calibrateGyro() {
   Serial.println("Keep still — calibrating gyro...");
   float sx=0, sy=0, sz=0;
@@ -179,7 +181,7 @@ void warmupAndZero() {
   Serial.println("Zeroed. Go!");
 }
 
-static void processCommand(char* cmd) {
+static void processCommand(char* cmd, float heading=heading) {
   if (!cmd || cmd[0] == '\0') return;
 
   char* cr = strchr(cmd, '\r');
@@ -209,21 +211,7 @@ static void processCommand(char* cmd) {
     digitalWrite(LEDB, LOW);
     digitalWrite(val, HIGH);
   } else if (type == 'I') {
-    if (IMU.gyroscopeAvailable()) {
-      float x, y, z;
-      IMU.readGyroscope(x, y, z);
-      z -= gbz;
-
-      if (abs(z) < 0.1) z = 0.0;  // ignores insignificant gyro readings/noise
-      
-      unsigned long now = micros();
-      float dt = (now-lastTime)*1e-6f;  // calc dt (elapsed time)
-      if (dt < 0.002f) return;
-      lastTime = now;
-
-      heading -= dt * z;  // integrate gyro's angular velocity to get heading
-      Serial.println(heading);
-    }
+    Serial.println(heading);
   }
 }
 
@@ -266,7 +254,7 @@ void loop() {
     if (inCommand) {
       if (c == '\n') {
         lineBuf[lineLen] = '\0';  // Null-terminate command
-        processCommand(lineBuf);
+        processCommand(lineBuf, heading);
         inCommand = false;
         lineLen = 0;
         continue;
@@ -280,5 +268,21 @@ void loop() {
         lineLen = 0;
       }
     }
+  }
+
+  //IMU Background Processing
+  if (IMU.gyroscopeAvailable()) {
+      float x, y, z;
+      IMU.readGyroscope(x, y, z);
+      z -= gbz;
+
+      if (abs(z) < 0.1) z = 0.0;  // ignores insignificant gyro readings/noise
+      
+      unsigned long now = micros();
+      float dt = (now-lastTime)*1e-6f;  // calc dt (elapsed time)
+      if (dt < 0.002f) return;
+      lastTime = now;
+
+      heading -= dt * z;  // integrate gyro's angular velocity to get heading
   }
 }
