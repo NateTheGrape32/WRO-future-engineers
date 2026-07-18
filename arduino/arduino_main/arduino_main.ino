@@ -206,9 +206,9 @@ static void processCommand(char* cmd, float heading=heading) {
     Serial.println(val);
   } else if (type == 'L') {
     if (val < 22 || val > 24) return;  // Invalid LED
-    digitalWrite(LEDR, LOW);
-    digitalWrite(LEDG, LOW);
-    digitalWrite(LEDB, LOW);
+    digitalWrite(22, LOW);
+    digitalWrite(23, LOW);
+    digitalWrite(24, LOW);
     digitalWrite(val, HIGH);
   } else if (type == 'I') {
     Serial.println(heading);
@@ -216,9 +216,9 @@ static void processCommand(char* cmd, float heading=heading) {
 }
 
 void setup() {
-  pinMode(LEDR, OUTPUT);
-  pinMode(LEDG, OUTPUT);
-  pinMode(LEDB, OUTPUT);
+  pinMode(22, OUTPUT); // red
+  pinMode(23, OUTPUT); // green
+  pinMode(24, OUTPUT); // blue
 
   servo.attach(SERVO_PIN, 900, 2100);
   motor.attach(MOTOR_PIN, 1000, 2000);
@@ -248,19 +248,16 @@ void loop() {
     char c = (char)Serial.read();
     if (c == SOC) {
       inCommand = true;
-      lineLen = 0;
-      continue;
     }
-    if (inCommand) {
+    else if (inCommand) {
       if (c == '\n') {
         lineBuf[lineLen] = '\0';  // Null-terminate command
         processCommand(lineBuf, heading);
         inCommand = false;
         lineLen = 0;
-        continue;
       }
 
-      if (lineLen < MAX_LINE) {
+      else if (lineLen < MAX_LINE) {
         lineBuf[lineLen++] = c;  // Append char to command buffer
       } else {
         // Command too long
