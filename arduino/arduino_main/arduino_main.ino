@@ -244,7 +244,7 @@ void setup() {
 
 void loop() {
   // CMD Processing
-  while (Serial.available() > 0) {
+  if (Serial.available() > 0) {
     char c = (char)Serial.read();
     if (c == SOC) {
       inCommand = true;
