@@ -61,8 +61,8 @@ turnSide = None
 confirmCount = 0
 turnEnterTime = None
 turnsCompleted = 0
-enterHeading = None
-currentHeading = None
+enterHeading = 0
+currentHeading = 0
 
 lineCount = 0
 linePresent = False
@@ -81,6 +81,9 @@ def send_servo(angle):
 
 def send_motor(speed):
     ser.write(f"$M{int(speed)}\n".encode())
+    
+def activate_led(led):
+	ser.write(f"$L{led}".encode())
 
 def draw_roi(img, roi, label = ""):
     x1, y1, x2, y2 = roi
@@ -253,7 +256,7 @@ while True:
 
         send_servo(steering)
 
-        print(f"$L{22}".encode())
+        activate_led(22)
 
         if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
             confirmCount += 1
@@ -276,14 +279,13 @@ while True:
             mode = "TURNING"
             turnEnterTime = now
             confirmCount = 0
-            print(f"$I".encode())
+            ser.write(f"$I".encode())
             if ser.in_waiting > 0:
                 enterHeading = float(ser.readline().decode().strip())
             print(enterHeading)
+            activate_led(23)
 
     elif mode == "TURNING":
-
-        print(f"$L{23}".encode())
 
         elapsed = now - turnEnterTime
 
@@ -300,6 +302,7 @@ while True:
         )
 
         if elapsed > EXIT_TIME_THRESH and wallSeenAgain:
+            ser.write(f"$I".encode())
             if ser.in_waiting > 0:
                 currentHeading = float(ser.readline().decode().strip())
                 print(currentHeading)
@@ -309,8 +312,8 @@ while True:
                 turnEnterTime = None
                 prevError = 0
                 turnsCompleted += 1
-                currentHeading = None
-                enterHeading = None
+                currentHeading = 0
+                enterHeading = 0
 
     draw_roi(frame, ROI_LEFT, "LEFT")
     draw_roi(frame, ROI_RIGHT, "RIGHT")
