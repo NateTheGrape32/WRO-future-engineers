@@ -83,7 +83,7 @@ def send_motor(speed):
     ser.write(f"$M{int(speed)}\n".encode())
     
 def activate_led(led):
-	ser.write(f"$L{led}".encode())
+	ser.write(f"$L{led}\n".encode())
 
 def draw_roi(img, roi, label = ""):
     x1, y1, x2, y2 = roi
@@ -197,9 +197,13 @@ def pd_controller(error, kp=0.5, kd=0.1):
 
     return steering
 
+while True:
+    line = ser.readline().decode().strip() if ser.in_waiting > 0 else None
+    if line == "Zeroed. Go!":
+        break
 
 send_servo(SERVO_CENTER)
-sleep(2)
+sleep(1)
 send_motor(MOTOR_DRIVE)
 
 while True:
@@ -279,7 +283,7 @@ while True:
             mode = "TURNING"
             turnEnterTime = now
             confirmCount = 0
-            ser.write(f"$I".encode())
+            ser.write("$I\n".encode())
             if ser.in_waiting > 0:
                 enterHeading = float(ser.readline().decode().strip())
             print(enterHeading)
@@ -302,7 +306,7 @@ while True:
         )
 
         if elapsed > EXIT_TIME_THRESH and wallSeenAgain:
-            ser.write(f"$I".encode())
+            ser.write("$I\n".encode())
             if ser.in_waiting > 0:
                 currentHeading = float(ser.readline().decode().strip())
                 print(currentHeading)

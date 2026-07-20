@@ -216,9 +216,9 @@ static void processCommand(char* cmd, float heading=heading) {
 }
 
 void setup() {
-  pinMode(22, OUTPUT); // red
-  pinMode(23, OUTPUT); // green
-  pinMode(24, OUTPUT); // blue
+  pinMode(22, OUTPUT); // blue
+  pinMode(23, OUTPUT); // red
+  pinMode(24, OUTPUT); // green
 
   servo.attach(SERVO_PIN, 900, 2100);
   motor.attach(MOTOR_PIN, 1000, 2000);
@@ -248,6 +248,7 @@ void loop() {
     char c = (char)Serial.read();
     if (c == SOC) {
       inCommand = true;
+      lineLen = 0;
     }
     else if (inCommand) {
       if (c == '\n') {
@@ -255,9 +256,7 @@ void loop() {
         processCommand(lineBuf, heading);
         inCommand = false;
         lineLen = 0;
-      }
-
-      else if (lineLen < MAX_LINE) {
+      } else if (lineLen < MAX_LINE) {
         lineBuf[lineLen++] = c;  // Append char to command buffer
       } else {
         // Command too long
@@ -269,17 +268,16 @@ void loop() {
 
   //IMU Background Processing
   if (IMU.gyroscopeAvailable()) {
-      float x, y, z;
-      IMU.readGyroscope(x, y, z);
-      z -= gbz;
+    float x, y, z;
+    IMU.readGyroscope(x, y, z);
+    z -= gbz;
 
-      if (abs(z) < 0.1) z = 0.0;  // ignores insignificant gyro readings/noise
+    if (abs(z) < 0.1) z = 0.0;  // ignores insignificant gyro readings/noise
       
-      unsigned long now = micros();
-      float dt = (now-lastTime)*1e-6f;  // calc dt (elapsed time)
-      if (dt < 0.002f) return;
-      lastTime = now;
+    unsigned long now = micros();
+    float dt = (now-lastTime)*1e-6f;  // calc dt (elapsed time)
+    lastTime = now;
 
-      heading -= dt * z;  // integrate gyro's angular velocity to get heading
+    heading -= dt * z;  // integrate gyro's angular velocity to get heading
   }
 }
