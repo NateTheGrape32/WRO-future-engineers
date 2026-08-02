@@ -181,6 +181,13 @@ void warmupAndZero() {
   Serial.println("Zeroed. Go!");
 }
 
+void startupCalibration() {
+  calibrateGyro();
+  warmupAndZero();
+  lastTime = micros();
+  heading = 0.0f;
+}
+
 static void processCommand(char* cmd, float heading=heading) {
   if (!cmd || cmd[0] == '\0') return;
 
@@ -196,14 +203,16 @@ static void processCommand(char* cmd, float heading=heading) {
   char* endp = nullptr;
   long val = strtol(cmd, &endp, 10);
 
-  if (type == 'S') {                            // Set servo position
+  if (type == 'C') {  // (re-)calibrate gyro and zero heading
+      startupCalibration();
+  } else if (type == 'S') {                            // Set servo position
       if (val < 25 || val > 130) return;  // Invalid angle
-      Serial.println(val);
+      //Serial.println(val);
       servo.write(val);
   } else if (type == 'M') {  // return IMU data and turn
     if (val < 1000 || val > 2000) return;  // Invalid speed
     motor.writeMicroseconds(val);
-    Serial.println(val);
+    //Serial.println(val);
   } else if (type == 'L') {
     if (val < 22 || val > 24) return;  // Invalid LED
     digitalWrite(22, LOW);
@@ -216,9 +225,13 @@ static void processCommand(char* cmd, float heading=heading) {
 }
 
 void setup() {
-  pinMode(22, OUTPUT); // blue
-  pinMode(23, OUTPUT); // red
+  pinMode(22, OUTPUT); // blue (straight)
+  pinMode(23, OUTPUT); // red (turning)
   pinMode(24, OUTPUT); // green
+
+  digitalWrite(22, LOW);
+  digitalWrite(23, LOW);
+  digitalWrite(24, LOW);
 
   servo.attach(SERVO_PIN, 900, 2100);
   motor.attach(MOTOR_PIN, 1000, 2000);
@@ -237,9 +250,7 @@ void setup() {
   // uncomment once to get mag offsets, paste above, then comment out again
   //calibrateMag();
 
-  calibrateGyro();
-  warmupAndZero();
-  lastTime = micros();
+  startupCalibration();
 }
 
 void loop() {

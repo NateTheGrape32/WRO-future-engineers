@@ -16,14 +16,14 @@ SERVO_RANGE = 85
 MOTOR_STOP = 1500
 MOTOR_DRIVE = 1600
 
-ROI_LEFT = [50, 295, 200, 640]
-ROI_RIGHT = [490, 295, 640, 640]
-ROI_CENTER = [200, 375, 490, 415]
+ROI_LEFT = [30, 280, 180, 610]
+ROI_RIGHT = [490, 280, 640, 610]
+ROI_CENTER = [180, 375, 490, 415]
 
 LAB_LOWER = np.array([0, 0, 0], dtype=np.uint8)
 LAB_UPPER = np.array([80, 255, 255], dtype=np.uint8)
 
-ENTER_TURN_THRESH = 400
+ENTER_TURN_THRESH = 300
 EXIT_TURN_THRESH = 4000
 
 CONFIRM_FRAMES = 5
@@ -55,6 +55,12 @@ ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
 ser.reset_input_buffer()
 ser.reset_output_buffer()
 
+ser.write("$C\n".encode())
+while True:
+    line = ser.readline().decode().strip() if ser.in_waiting > 0 else None
+    if line == "Zeroed. Go!":
+        break
+
 prevError = 0
 mode = "FOLLOW_WALL"
 turnSide = None
@@ -84,6 +90,16 @@ def send_motor(speed):
     
 def activate_led(led):
 	ser.write(f"$L{led}\n".encode())
+
+def grab_heading(heading):
+    ser.reset_input_buffer()
+    sleep(0.1)
+    ser.write("$I\n".encode())
+    while True:
+        if ser.in_waiting > 0:
+            heading = float(ser.readline().decode().strip())
+            break
+    return heading
 
 def draw_roi(img, roi, label = ""):
     x1, y1, x2, y2 = roi
@@ -183,7 +199,7 @@ def detect_colored_line(frame):
 
     return detected, mask
 
-def pd_controller(error, kp=0.5, kd=0.1):
+def pd_controller(error, kp=0.7, kd=0.3):
     global prevError
 
     derivative = error - prevError
@@ -197,10 +213,6 @@ def pd_controller(error, kp=0.5, kd=0.1):
 
     return steering
 
-while True:
-    line = ser.readline().decode().strip() if ser.in_waiting > 0 else None
-    if line == "Zeroed. Go!":
-        break
 
 send_servo(SERVO_CENTER)
 sleep(1)
@@ -267,7 +279,7 @@ while True:
         else:
             confirmCount = 0
 
-        if confirmCount >= CONFIRM_FRAMES:
+        if confirmCount >= CONFIRM_FRAMES and linePresent:
 
             if leftArea < rightArea:
                 turnSide = "LEFT"
@@ -277,12 +289,11 @@ while True:
                 turnSide = "RIGHT"
                 send_servo(SERVO_RIGHT)
 
-            else:
-                turnSide = "BOTH"
-
             mode = "TURNING"
             turnEnterTime = now
             confirmCount = 0
+            ser.reset_input_buffer()
+            sleep(0.1)
             ser.write("$I\n".encode())
             if ser.in_waiting > 0:
                 enterHeading = float(ser.readline().decode().strip())
@@ -308,6 +319,8 @@ while True:
         if elapsed > EXIT_TIME_THRESH and wallSeenAgain:
             ser.write("$I\n".encode())
             if ser.in_waiting > 0:
+                ser.reset_input_buffer()
+                sleep(0.1)
                 currentHeading = float(ser.readline().decode().strip())
                 print(currentHeading)
             if abs(currentHeading - enterHeading) >= EXIT_ANGLE_THRESH:
@@ -348,6 +361,16 @@ while True:
         (255, 0, 0), 
         2
     )
+    
+    cv2.putText(
+		frame,
+		f"Line Count: {lineCount}",
+		(20, 130),
+		cv2.FONT_HERSHEY_SIMPLEX,
+		0.7,
+		(0, 255, 0),
+		2
+	)
 
     cv2.imshow("Frame", frame)
     cv2.imshow("Center Mask", centerMask)
