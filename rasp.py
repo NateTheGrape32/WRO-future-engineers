@@ -20,22 +20,23 @@ MOTOR_DRIVE = 1600
 ROI_LEFT = [30, 290, 180, 610]
 ROI_RIGHT = [490, 290, 640, 610]
 ROI_CENTER = [180, 375, 490, 415]
-ROI_PILLARS = [140, 250, 530, 610]
+ROI_PILLARS = [0, 200, 640, 480]
 
 LAB_LOWER = np.array([0, 0, 0], dtype=np.uint8)
-LAB_UPPER = np.array([80, 255, 255], dtype=np.uint8)
+LAB_UPPER = np.array([65, 255, 255], dtype=np.uint8)
 
-HSV_RED_LOWER1 = np.array([0, 80, 80])
-HSV_RED_UPPER1 = np.array([10, 255, 255])
+HSV_RED_LOWER1 = np.array([0, 90, 90])
+HSV_RED_UPPER1 = np.array([7, 255, 255])
 HSV_RED_LOWER2 = np.array([160, 80, 80])
 HSV_RED_UPPER2 = np.array([179, 255, 255])
 
-HSV_GREEN_LOWER = np.array([35, 80, 80])
+HSV_GREEN_LOWER = np.array([40, 90, 0])
 HSV_GREEN_UPPER = np.array([90, 255, 255])
 
 PILLAR_THRESH = 100
 
-ENTER_TURN_THRESH = 300
+ENTER_TURN_THRESH_LOWER = 300
+ENTER_TURN_THRESH_UPPER = 16000
 EXIT_TURN_THRESH = 4000
 
 CONFIRM_FRAMES = 5
@@ -87,6 +88,7 @@ mainColor = None
 
 lineCount = 0
 linePresent = False
+goClockwise = "?"
 
 stopScheduled = False
 stopTime = None
@@ -195,29 +197,33 @@ def detect_colored_line(frame):
         ORANGE_UPPER
     )
 
-
-    mask = cv2.bitwise_or(
-        blueMask,
-        orangeMask
-    )
-
-
     kernel = np.ones((3,3), np.uint8)
 
-    mask = cv2.morphologyEx(
-        mask,
+    blueMask = cv2.morphologyEx(
+        blueMask,
         cv2.MORPH_OPEN,
         kernel
     )
+    
+    orangeMask = cv2.morphologyEx(
+		orangeMask,
+		cv2.MORPH_OPEN,
+		kernel
+    )
+    
+    mask = cv2.bitwise_or(blueMask, orangeMask)
 
 
-    area = cv2.countNonZero(mask)
+    areaBlue = cv2.countNonZero(blueMask)
+    areaOrange = cv2.countNonZero(orangeMask)
 
 
-    detected = area > LINE_THRESH
+    detected = areaBlue > LINE_THRESH or areaOrange > LINE_THRESH
+    
+    clockwise = True if areaOrange else False
 
+    return detected, mask, clockwise
 
-    return detected, mask
 
 def detect_pillars(frame, roi, hsv_lower1, hsv_upper1, hsv_lower2=None, hsv_upper2=None):
     x1, y1, x2, y2 = roi
@@ -298,11 +304,13 @@ try:
         rightContour, rightMask, rightArea = find_wall_area(frame, ROI_RIGHT)
         if mainPillar is not None:
             if mainColor == "RED":
-                leftArea += redArea*2
+                error = (leftArea + redArea*3) - rightArea
             else:
-                rightArea += greenArea*2
+                error = leftArea - (rightArea + greenArea*3)
+        else:
+            error = leftArea - rightArea
         
-        lineDetected, centerMask = detect_colored_line(frame)
+        lineDetected, centerMask, direction = detect_colored_line(frame)
 
 
         if lineDetected and not linePresent:
@@ -313,7 +321,10 @@ try:
 
             linePresent = True
 
-
+            if lineCount == 1:
+                goClockwise = direction
+                print(f"turn right/clockwise: {goClockwise}")
+				
             if lineCount == 23:
 
                 stopScheduled = True
@@ -340,35 +351,53 @@ try:
 
         if mode == "FOLLOW_WALL":
 
-            error = (leftArea - rightArea) / roiArea * SERVO_RANGE
+            error /= roiArea 
+            error *= SERVO_RANGE
 
             steering = pd_controller(error)
 
             send_servo(steering)
 
             activate_led(22)
+            
+            tooMuchWall = leftArea > ENTER_TURN_THRESH_UPPER and rightArea > ENTER_TURN_THRESH_UPPER
+            normalTurn = leftArea < ENTER_TURN_THRESH_LOWER or rightArea < ENTER_TURN_THRESH_LOWER
 
-            if leftArea < ENTER_TURN_THRESH or rightArea < ENTER_TURN_THRESH:
+            if normalTurn or tooMuchWall:
                 confirmCount += 1
             else:
                 confirmCount = 0
 
-            if confirmCount >= CONFIRM_FRAMES and linePresent:
+            if confirmCount >= CONFIRM_FRAMES:
 
-                if leftArea < rightArea:
-                    turnSide = "LEFT"
-                    send_servo(SERVO_LEFT)
+                if linePresent:
+                    if leftArea < rightArea:
+                        turnSide = "LEFT"
+                        send_servo(SERVO_LEFT)
 
-                elif rightArea < leftArea:
-                    turnSide = "RIGHT"
-                    send_servo(SERVO_RIGHT)
-
-                mode = "TURNING"
-                turnEnterTime = now
-                confirmCount = 0
-                enterHeading = grab_heading()
-                print(enterHeading)
-                activate_led(23)
+                    elif rightArea < leftArea:
+                        turnSide = "RIGHT"
+                        send_servo(SERVO_RIGHT)
+                    mode = "TURNING"
+                    turnEnterTime = now
+                    confirmCount = 0
+                    enterHeading = grab_heading()
+                    print(enterHeading)
+                    activate_led(23)
+                
+                elif goClockwise is not "?" and tooMuchWall:
+                    if goClockwise:
+                        turnSide = "RIGHT"
+                        send_servo(SERVO_RIGHT)
+                    else:
+                        turnSide = "LEFT"
+                        send_servo(SERVO_LEFT)
+                    mode = "TURNING"
+                    turnEnterTime = now
+                    confirmCount = 0
+                    enterHeading = grab_heading()
+                    print(enterHeading)
+                    activate_led(23)
 
         elif mode == "TURNING":
 
