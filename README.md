@@ -35,8 +35,7 @@ In creating the chassis, we needed to incorporate these things which was done by
 Speed choice: MOTOR_DRIVE = 1600 µs
 Through use of testing, we concluded that this is the fastest speed in which we could consistently obtain the same results, navigating safely through the challenge. 1500 is its stationary position.
 # Gif
-
-<img width="500" height="446" alt="azhmsi" src="https://github.com/user-attachments/assets/96b7b48d-e61e-43dd-a796-b4c158e19ed6" />
+<img width="204" height="283" alt="azhn33" src="https://github.com/user-attachments/assets/6a6a92f3-39ec-4679-ba64-87e0c55c8f9f" />
 
 
 
