@@ -1,7 +1,7 @@
 # WRO-future-engineers
 WRO 2026 Andrew and Nathan
 
-#Materials
+# Materials
 Originally we planned to use the following RC car for its chassis: https://www.amazon.ca/Full-Scale-Rear-Wheel-Rechargeable-Control-Crawler/dp/B0G24MWNGD?th=1
 However, this did not have the things that we wanted so we switched chassis
 
@@ -17,7 +17,7 @@ This Arduino Nano: https://store-usa.arduino.cc/products/nano-33-ble-sense-rev2
 
 This Button: https://www.amazon.ca/dp/B01J9KO7DC?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1
 
-#Mobility & Mechanical Design
+# Mobility & Mechanical Design
 In creating the chassis, we needed to incorporate these things which was done by:
 - low center of gravity to maintain balance and reach higher speeds
     - creating a compact design as close to the ground as possible
