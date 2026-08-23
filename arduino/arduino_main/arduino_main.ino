@@ -22,9 +22,7 @@ float gyroBiasZ = 0;
 float heading = 0;
 unsigned long lastTime = 0;
 
-
-// -------------------- Gyro --------------------
-
+//gyro
 void calibrateGyro() {
   Serial.println("Keep still — calibrating gyro...");
 
@@ -59,8 +57,7 @@ void startupCalibration() {
 }
 
 
-// -------------------- Commands --------------------
-
+//commands
 void processCommand(char *cmd) {
   if (cmd == nullptr || cmd[0] == '\0')
     return;
@@ -114,7 +111,7 @@ void processCommand(char *cmd) {
 }
 
 
-// -------------------- Setup --------------------
+//setup
 
 void setup() {
   // LEDs
@@ -149,8 +146,7 @@ void setup() {
 }
 
 
-// -------------------- Loop --------------------
-
+//loop
 void loop() {
 
   // Read serial commands
