@@ -32,10 +32,12 @@ In creating the chassis, we needed to incorporate these things which was done by
     - Choosing a chassis that enabled an angle range of 65°–95°, center 80°
     - Programming our code to allow these angles through use of servo motor
 
-<img width="2861" height="2523" alt="IMG_4002" src="https://github.com/user-attachments/assets/cbea2c33-3eac-42a4-9990-b7758b300ed1" />
-
-
 Speed choice: MOTOR_DRIVE = 1600 µs
 Through use of testing, we concluded that this is the fastest speed in which we could consistently obtain the same results, navigating safely through the challenge. 1500 is its stationary position.
+# GIf
+<img width="1040" height="1693" alt="image" src="https://github.com/user-attachments/assets/e1d6a6cd-4588-4bfa-b1c7-b44c5a048373" />
+
+
+
 
 
