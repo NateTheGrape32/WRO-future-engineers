@@ -18,6 +18,10 @@ This Arduino Nano: https://store-usa.arduino.cc/products/nano-33-ble-sense-rev2
 
 This Button: https://www.amazon.ca/dp/B01J9KO7DC?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1
 
+Servo motor for driving: https://hitecrcd.com/hs-5055mg-economy-metal-gear-feather-servo/ 
+
+
+
 # Mobility & Mechanical Design
 In creating the chassis, we needed to incorporate these things which was done by:
 - low center of gravity to maintain balance and reach higher speeds
