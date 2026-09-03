@@ -50,7 +50,11 @@ void calibrateGyro() {
 void startupCalibration() {
   calibrateGyro();
 
+<<<<<<< HEAD
   heading = 0.0f;
+=======
+  heading = 0;
+>>>>>>> f6ff1eb1c4acbcff55a9fa99db91100f147048d6
   lastTime = micros();
 
   Serial.println("Ready!");
