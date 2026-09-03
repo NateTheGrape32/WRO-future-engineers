@@ -71,7 +71,7 @@ ser.reset_output_buffer()
 ser.write("$C\n".encode())
 while True:
     line = ser.readline().decode().strip() if ser.in_waiting > 0 else None
-    if line == "Zeroed. Go!":
+    if line == "Ready!":
         break
 
 prevError = 0
@@ -88,7 +88,7 @@ mainColor = None
 
 lineCount = 0
 linePresent = False
-goClockwise = "?"
+goClockwise = False
 
 stopScheduled = False
 stopTime = None
@@ -310,7 +310,7 @@ try:
         else:
             error = leftArea - rightArea
         
-        lineDetected, centerMask, direction = detect_colored_line(frame)
+        lineDetected, centerMask, clockwise = detect_colored_line(frame)
 
 
         if lineDetected and not linePresent:
@@ -322,7 +322,7 @@ try:
             linePresent = True
 
             if lineCount == 1:
-                goClockwise = direction
+                goClockwise = clockwise
                 print(f"turn right/clockwise: {goClockwise}")
 				
             if lineCount == 23:
@@ -385,7 +385,7 @@ try:
                     print(enterHeading)
                     activate_led(23)
                 
-                elif goClockwise is not "?" and tooMuchWall:
+                elif tooMuchWall:
                     if goClockwise:
                         turnSide = "RIGHT"
                         send_servo(SERVO_RIGHT)
@@ -482,7 +482,7 @@ try:
         )
 
         cv2.imshow("Frame", frame)
-        cv2.imshow("Center Mask", centerMask)
+        #cv2.imshow("Center Mask", centerMask)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 

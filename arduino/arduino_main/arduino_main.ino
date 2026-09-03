@@ -1,157 +1,204 @@
 #include <Arduino.h>
 #include <ctype.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <Servo.h>
 #include <Arduino_BMI270_BMM150.h>
 
-static unsigned long lastTime = 0;
-static float gbx=0, gby=0, gbz=0;
-
-static const size_t MAX_LINE = 16;  // Max command line length, excluding EOL
-static char lineBuf[MAX_LINE + 1];
-static size_t lineLen = 0;
-static const char SOC = '$';  // start of command character
-static bool inCommand = false;
-static float biasX = 0.0, biasY = 0.0, biasZ = 0.0;
-Servo servo;
-Servo motor;
 #define SERVO_PIN 8
 #define MOTOR_PIN 9
 
-// Kp = how fast it corrects, Ki = slowly kills gyro bias
-#define Kp  2.0f
-#define Ki  0.05f
+#define MAX_LINE 16
+#define START_CHAR '$'
 
-static float heading = 0.0f;
+Servo servo;
+Servo motor;
 
+char command[MAX_LINE + 1];
+int commandLength = 0;
+bool readingCommand = false;
+
+float gyroBiasZ = 0;
+float heading = 0;
+unsigned long lastTime = 0;
+
+//gyro
 void calibrateGyro() {
   Serial.println("Keep still — calibrating gyro...");
-  float sx=0, sy=0, sz=0;
-  int n = 2000;
-  for (int i=0; i<n; i++) {
-    float gx,gy,gz;
+
+  float sumZ = 0;
+  const int samples = 2000;
+
+  for (int i = 0; i < samples; i++) {
+    float x, y, z;
+
     while (!IMU.gyroscopeAvailable());
-    IMU.readGyroscope(gx,gy,gz);
-    sx+=gx; sy+=gy; sz+=gz;
+
+    IMU.readGyroscope(x, y, z);
+    sumZ += z;
+
     delay(3);
   }
-  gbx=sx/n; gby=sy/n; gbz=sz/n;
-  Serial.print("Gyro bias: ");
-  Serial.print(gbx,4); Serial.print(" ");
-  Serial.print(gby,4); Serial.print(" ");
-  Serial.println(gbz,4);
+
+  gyroBiasZ = sumZ / samples;
+
+  Serial.print("Gyro Z bias: ");
+  Serial.println(gyroBiasZ, 4);
 }
 
 
 void startupCalibration() {
   calibrateGyro();
-  lastTime = micros();
+
   heading = 0.0f;
+  lastTime = micros();
+
   Serial.println("Ready!");
 }
 
-static void processCommand(char* cmd, float heading=heading) {
-  if (!cmd || cmd[0] == '\0') return;
 
-  char* cr = strchr(cmd, '\r');
-  if (cr) *cr = '\0';
+//commands
+void processCommand(char *cmd) {
+  if (cmd == nullptr || cmd[0] == '\0')
+    return;
 
-  while (*cmd && isspace((unsigned char)*cmd)) cmd++;  // Trim leading whitespace
-  if (*cmd == '\0') return;
+  // Remove carriage return if there is one
+  char *cr = strchr(cmd, '\r');
+  if (cr)
+    *cr = '\0';
+
+  // Skip spaces
+  while (*cmd && isspace(*cmd))
+    cmd++;
+
+  if (*cmd == '\0')
+    return;
 
   char type = *cmd++;
 
-  // Parse int argument
-  char* endp = nullptr;
-  long val = strtol(cmd, &endp, 10);
+  long value = strtol(cmd, nullptr, 10);
 
-  if (type == 'C') {  // (re-)calibrate gyro and zero heading
+  switch (type) {
+
+    case 'C':   // Calibrate
       startupCalibration();
-  } else if (type == 'S') {                            // Set servo position
-      if (val < 25 || val > 130) return;  // Invalid angle
-      //Serial.println(val);
-      servo.write(val);
-  } else if (type == 'M') {  // return IMU data and turn
-    if (val < 1000 || val > 2000) return;  // Invalid speed
-    motor.writeMicroseconds(val);
-    //Serial.println(val);
-  } else if (type == 'L') {
-    if (val < 22 || val > 24) return;  // Invalid LED
-    digitalWrite(22, LOW);
-    digitalWrite(23, LOW);
-    digitalWrite(24, LOW);
-    digitalWrite(val, HIGH);
-  } else if (type == 'I') {
-    Serial.println(heading);
+      break;
+
+    case 'S':   // Servo
+      if (value >= 25 && value <= 130)
+        servo.write(value);
+      break;
+
+    case 'M':   // Motor
+      if (value >= 1000 && value <= 2000)
+        motor.writeMicroseconds(value);
+      break;
+
+    case 'L':   // LED
+      if (value >= 22 && value <= 24) {
+        digitalWrite(22, LOW);
+        digitalWrite(23, LOW);
+        digitalWrite(24, LOW);
+
+        digitalWrite(value, HIGH);
+      }
+      break;
+
+    case 'I':   // Print heading
+      Serial.println(heading);
+      break;
   }
 }
 
+
+//setup
+
 void setup() {
-  pinMode(22, OUTPUT); // blue (straight)
-  pinMode(23, OUTPUT); // red (turning)
-  pinMode(24, OUTPUT); // green
+  // LEDs
+  pinMode(22, OUTPUT);
+  pinMode(23, OUTPUT);
+  pinMode(24, OUTPUT);
 
   digitalWrite(22, LOW);
   digitalWrite(23, LOW);
   digitalWrite(24, LOW);
 
+  // Servo and motor
   servo.attach(SERVO_PIN, 900, 2100);
   motor.attach(MOTOR_PIN, 1000, 2000);
+
   servo.write(80);
   motor.writeMicroseconds(1500);
 
+  // Serial
   Serial.begin(115200);
   while (!Serial);
 
+  // IMU
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
-    while (1);
+    while (true);
   }
+
   Serial.println("IMU initialized successfully.");
 
-  // uncomment once to get mag offsets, paste above, then comment out again
-  //calibrateMag();
-
-  startupCalibration();
 }
 
+
+//loop
 void loop() {
-  // CMD Processing
-  if (Serial.available() > 0) {
-    char c = (char)Serial.read();
-    if (c == SOC) {
-      inCommand = true;
-      lineLen = 0;
+
+  // Read serial commands
+  while (Serial.available()) {
+    char c = Serial.read();
+
+    if (c == START_CHAR) {
+      readingCommand = true;
+      commandLength = 0;
     }
-    else if (inCommand) {
+    else if (readingCommand) {
+
       if (c == '\n') {
-        lineBuf[lineLen] = '\0';  // Null-terminate command
-        processCommand(lineBuf, heading);
-        inCommand = false;
-        lineLen = 0;
-      } else if (lineLen < MAX_LINE) {
-        lineBuf[lineLen++] = c;  // Append char to command buffer
-      } else {
-        // Command too long
-        inCommand = false;
-        lineLen = 0;
+        command[commandLength] = '\0';
+
+        processCommand(command);
+
+        readingCommand = false;
+        commandLength = 0;
+      }
+
+      else if (commandLength < MAX_LINE) {
+        command[commandLength++] = c;
+      }
+
+      else {
+        // Command was too long
+        readingCommand = false;
+        commandLength = 0;
       }
     }
   }
 
-  //IMU Background Processing
+
+  // Read gyro
   if (IMU.gyroscopeAvailable()) {
+
     float x, y, z;
     IMU.readGyroscope(x, y, z);
-    z -= gbz;
 
-    if (abs(z) < 0.1) z = 0.0;  // ignores insignificant gyro readings/noise
-      
+    z -= gyroBiasZ;
+
+    // Ignore small gyro noise
+    if (abs(z) < 0.1)
+      z = 0;
+
     unsigned long now = micros();
-    float dt = (now-lastTime)*1e-6f;  // calc dt (elapsed time)
+
+    float dt = (now - lastTime) * 0.000001f;
+
     lastTime = now;
 
-    heading -= dt * z;  // integrate gyro's angular velocity to get heading
+    // Integrate angular velocity into heading
+    heading -= z * dt;
   }
 }
