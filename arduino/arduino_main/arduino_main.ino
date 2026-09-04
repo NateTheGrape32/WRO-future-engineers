@@ -5,8 +5,8 @@
 #include <Servo.h>
 #include <Arduino_BMI270_BMM150.h>
 
-#define SERVO_PIN 8
-#define MOTOR_PIN 9
+#define SERVO_PIN 9
+#define MOTOR_PIN 8
 
 #define MAX_LINE 16
 #define START_CHAR '$'
@@ -50,11 +50,7 @@ void calibrateGyro() {
 void startupCalibration() {
   calibrateGyro();
 
-<<<<<<< HEAD
   heading = 0.0f;
-=======
-  heading = 0;
->>>>>>> f6ff1eb1c4acbcff55a9fa99db91100f147048d6
   lastTime = micros();
 
   Serial.println("Ready!");
@@ -80,7 +76,8 @@ void processCommand(char *cmd) {
 
   char type = *cmd++;
 
-  long value = strtol(cmd, nullptr, 10);
+  char* endp = nullptr;
+  long value = strtol(cmd, &endp, 10);
 
   switch (type) {
 
@@ -100,9 +97,9 @@ void processCommand(char *cmd) {
 
     case 'L':   // LED
       if (value >= 22 && value <= 24) {
-        digitalWrite(22, LOW);
-        digitalWrite(23, LOW);
-        digitalWrite(24, LOW);
+        digitalWrite(LEDG, LOW);
+        digitalWrite(LEDR, LOW);
+        digitalWrite(LEDB, LOW);
 
         digitalWrite(value, HIGH);
       }
@@ -145,7 +142,7 @@ void setup() {
   }
 
   Serial.println("IMU initialized successfully.");
-
+  startupCalibration();
 }
 
 
@@ -153,7 +150,7 @@ void setup() {
 void loop() {
 
   // Read serial commands
-  while (Serial.available()) {
+  if (Serial.available()) {
     char c = Serial.read();
 
     if (c == START_CHAR) {

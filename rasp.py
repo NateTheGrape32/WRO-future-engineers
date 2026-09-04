@@ -17,6 +17,10 @@ SERVO_RANGE = 85
 MOTOR_STOP = 1500
 MOTOR_DRIVE = 1600
 
+LEDB = 22
+LEDR = 23
+LEDG = 24
+
 ROI_LEFT = [30, 290, 180, 610]
 ROI_RIGHT = [490, 290, 640, 610]
 ROI_CENTER = [180, 375, 490, 415]
@@ -41,7 +45,6 @@ EXIT_TURN_THRESH = 4000
 
 CONFIRM_FRAMES = 5
 EXIT_TIME_THRESH = 0.75
-
 EXIT_ANGLE_THRESH = 80
 
 BLUE_LOWER = np.array([95,80,80])
@@ -51,7 +54,7 @@ ORANGE_LOWER = np.array([5,100,100])
 ORANGE_UPPER = np.array([25,255,255])
 
 LINE_THRESH = 1000
-STOP_DELAY = 5.0
+STOP_DELAY = 2.0
 
 picam2 = Picamera2()
 picam2.preview_configuration.main.size = (640, 480)
@@ -121,7 +124,6 @@ def grab_heading():
 def draw_roi(img, roi, label = ""):
     x1, y1, x2, y2 = roi
     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
 
     if label:
         cv2.putText(
@@ -324,19 +326,15 @@ try:
             if lineCount == 1:
                 goClockwise = clockwise
                 print(f"turn right/clockwise: {goClockwise}")
-				
-            if lineCount == 23:
-
-                stopScheduled = True
-                stopTime = now
-
-                print("23rd line detected")
-                print("Stopping in 3 seconds")
-
 
         elif not lineDetected:
 
             linePresent = False
+            
+        if turnsCompleted == 11:
+            stopScheduled = True
+            stopTime = now
+            print("11 turns done\nStopping in 2 seconds")
             
         if stopScheduled:
 
@@ -358,7 +356,7 @@ try:
 
             send_servo(steering)
 
-            activate_led(22)
+            activate_led(LEDB)
             
             tooMuchWall = leftArea > ENTER_TURN_THRESH_UPPER and rightArea > ENTER_TURN_THRESH_UPPER
             normalTurn = leftArea < ENTER_TURN_THRESH_LOWER or rightArea < ENTER_TURN_THRESH_LOWER
@@ -383,7 +381,7 @@ try:
                     confirmCount = 0
                     enterHeading = grab_heading()
                     print(enterHeading)
-                    activate_led(23)
+                    activate_led(LEDG)
                 
                 elif tooMuchWall:
                     if goClockwise:
@@ -397,7 +395,7 @@ try:
                     confirmCount = 0
                     enterHeading = grab_heading()
                     print(enterHeading)
-                    activate_led(23)
+                    activate_led(LEDG)
 
         elif mode == "TURNING":
 
@@ -482,7 +480,7 @@ try:
         )
 
         cv2.imshow("Frame", frame)
-        #cv2.imshow("Center Mask", centerMask)
+        cv2.imshow("Center Mask", centerMask)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
