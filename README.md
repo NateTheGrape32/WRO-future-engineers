@@ -42,6 +42,8 @@ Through use of testing, we concluded that this is the fastest speed in which we 
 # Gif
 <img width="204" height="283" alt="azhn33" src="https://github.com/user-attachments/assets/6a6a92f3-39ec-4679-ba64-87e0c55c8f9f" />
 
-
-
-
+# Wiring Diagram(file also included above)
+<img width="440" height="311" alt="image" src="https://github.com/user-attachments/assets/e3eac9ea-6c17-4ec7-8378-bedb8b33fbd1" />
+# Power and Sensor Architecture
+The Battery powers the Raspberry Pi which is the master controller, receiving information from the Pi Camera. The Raspberry Pi then sends basic commands to the Arduino Nano which sends the information through the ESC into the servo and DC motors, which controls the steering and speed of the robot. 
+In choosing our sensor, we decided upon the the Pi camera because we deemed it would work well with the Raspberry Pi and had all the necessary functions such as a wide camera view and colour differentiation enabling it to see both the walls and pillars
