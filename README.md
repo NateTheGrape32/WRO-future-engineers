@@ -46,14 +46,16 @@ Through use of testing, we concluded that this is the fastest speed in which we 
 <img width="440" height="311" alt="image" src="https://github.com/user-attachments/assets/e3eac9ea-6c17-4ec7-8378-bedb8b33fbd1" />
 
 # Power and Sensor Architecture
-The Battery powers the Raspberry Pi which is the master controller, receiving information from the Pi Camera. The Raspberry Pi then sends basic commands to the Arduino Nano which sends the information through the ESC into the servo and DC motors, which controls the steering and speed of the robot. 
+The Battery powers the Raspberry Pi, which is the master controller, through the Raspberry Pi's power regulator. The Raspberry Pi receives information from the Pi Camera. The Raspberry Pi then sends basic commands to the Arduino Nano which sends the information through the ESC into the servo and DC motors, which controls the steering and speed of the robot. 
+
+Battery -> Power Regulator -> Raspberry Pi -> Arduino Nano -> ESC -> Servo & DC Motors
 
 In choosing our sensor, we decided upon the the Pi camera because we deemed it would work well with the Raspberry Pi and had all the necessary functions such as a wide camera view and colour differentiation enabling it to see both the walls and pillars
 
 # Software Architecture & Obstacle Strategy
 For the Open Challenge, we have 2 modes; TURNING MODE and FOLLOW_WALL MODE. During the wall following mode, the robot uses a combination of PD control and the Pi cameras input of the amount of the walls within its view in order to calculate how close to each wall the robot is, adjusting the robot as it goes. Originally, we set the kp = 0.5 & kd = 0.1 but after further testing, we concluded that the robot didn't adjust quickly enough so with testing, we concluded that the perfect numbers were kp = 0.7 & kd = 0.3. 
 
-On the other hand, TURNING MODE is used once one of the walls disappears completely. Once this is the case, we know that the robot has reached a point where there is no wall on one side and so the robot starts turning for a few seconds or until the wall is visible again on the side where it previously wasn't. This allows us to preform the sharper turns without having to increase to kp & kd values to ones that may have the robot overcorrect. 
+On the other hand, TURNING MODE is used once one of the walls disappears completely. Once this is the case, we know that the robot has reached a point where there is no wall on one side and so the robot starts turning for a few seconds or until the wall is visible again on the side where it previously wasn't. This allows us to preform the sharper turns without having to increase the kp & kd values to ones that may have the robot overcorrect. 
 
 Meanwhile, for the Obstacle Challenge, the Pi camera notifies the pi of the closest pilar, whether red or green. When the pi receives this information, it shifts over to one side of the track by increasing the amount of wall the camera should be seeing on one side compared to the other. 
 
