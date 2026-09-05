@@ -53,6 +53,8 @@ In choosing our sensor, we decided upon the the Pi camera because we deemed it w
 # Software Architecture & Obstacle Strategy
 For the Open Challenge, we have 2 modes; TURNING MODE and FOLLOW_WALL MODE. During the wall following mode, the robot uses a combination of PD control and the Pi cameras input of the amount of the walls within its view in order to calculate how close to each wall the robot is, adjusting the robot as it goes. Originally, we set the kp = 0.5 & kd = 0.1 but after further testing, we concluded that the robot didn't adjust quickly enough so with testing, we concluded that the perfect numbers were kp = 0.7 & kd = 0.3. 
 
+On the other hand, TURNING MODE is used once one of the walls disappears completely. Once this is the case, we know that the robot has reached a point where there is no wall on one side and so the robot starts turning for a few seconds or until the wall is visible again on the side where it previously wasn't. This allows us to preform the sharper turns without having to increase to kp & kd values to ones that may have the robot overcorrect. 
+
 Meanwhile, for the Obstacle Challenge, the Pi camera notifies the pi of the closest pilar, whether red or green. When the pi receives this information, it shifts over to one side of the track by increasing the amount of wall the camera should be seeing on one side compared to the other. 
 
 Meanwhile, the robot also counts the laps using the blue and orange lines. after having counted 23 blue and orange lines, the robot enters a time of "STOP_DELAY" in order to stop not at the line located in the corner of the map but at the intended side of the map. 
