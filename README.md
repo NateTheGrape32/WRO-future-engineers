@@ -2,23 +2,23 @@
 WRO 2026 Andrew and Nathan
 
 # Materials
-Originally we planned to use the following RC car for its chassis: https://www.amazon.ca/Full-Scale-Rear-Wheel-Rechargeable-Control-Crawler/dp/B0G24MWNGD?th=1
+Originally we planned to use the following RC car for its chassis: [Original Chasis](https://www.amazon.ca/Full-Scale-Rear-Wheel-Rechargeable-Control-Crawler/dp/B0G24MWNGD?th=1)
 
 However, this did not have the things that we wanted so we switched chassis to this one: [New Chasis](https://www.aliexpress.com/item/1005007171270606.html?spm=a2g0o.productlist.main.1.289cSZLuSZLuyz&algo_pvid=d5597024-2cfb-4d7d-91cb-67a7236b9c16&algo_exp_id=d5597024-2cfb-4d7d-91cb-67a7236b9c16-0&pdp_ext_f=%7B%22order%22%3A%22817%22%2C%22eval%22%3A%221%22%2C%22orig_sl_item_id%22%3A%221005007171270606%22%2C%22orig_item_id%22%3A%221005005831438904%22%2C%22fromPage%22%3A%22search%22%7D&pdp_npi=6%40dis%21CAD%21144.00%2167.68%21%21%21685.39%21322.13%21%4021032e4e17886469147393288e0f4b%2112000039693550543%21sea%21CA%210%21ABX%211%210%21n_tag%3A-29910%3Bd%3A61c648%3Bm03_new_user%3A-29895&curPageLogUid=kDYrA4otmimK&utparam-url=scene%3Asearch%7Cquery_from%3A%7Cx_object_id%3A1005007171270606%7C_p_origin_prod%3A1005005831438904)
 
-In addition, we used this 2D LiDAR: https://www.aliexpress.com/item/1005003012681021.html?spm=a2g0o.order_list.order_list_main.31.67dd18029q37Y0
+In addition, we used this 2D LiDAR: [2D Lidar](https://www.aliexpress.com/item/1005003012681021.html?spm=a2g0o.order_list.order_list_main.31.67dd18029q37Y0)
 
-This Pi camera: https://www.aliexpress.com/item/1005009258177201.htmlpdp_npi=6%40dis%21USD%21%2430.99%21%2415.19%21%21%21%21%21%402101e83017699792506122817ed50e%2112000048516190389%21btfpre%21%21%21%211%210%21&afTraceInfo=1005009258177201__pc__c_ppc_item_bridge_pc_related_wf__q8i25HV__1769979250883 
+This Pi camera: [Pi Camera](https://www.aliexpress.com/item/1005009258177201.htmlpdp_npi=6%40dis%21USD%21%2430.99%21%2415.19%21%21%21%21%21%402101e83017699792506122817ed50e%2112000048516190389%21btfpre%21%21%21%211%210%21&afTraceInfo=1005009258177201__pc__c_ppc_item_bridge_pc_related_wf__q8i25HV__1769979250883) 
 
-This Pi Power Regulator: https://ca.robotshop.com/products/yahboom-power-supply-expansion-board-raspberry-pi-5 
+This Pi Power Regulator: [Power Regulator](https://ca.robotshop.com/products/yahboom-power-supply-expansion-board-raspberry-pi-5) 
 
 This Battery/Power Supply: https://genstattu.com/gens-ace-1300mah-2s-7-4v-45c-g-tech-lipo-battery-pack-with-deans-plug/?srsltid=AfmBOoo-qPXzcxuH2dIqTfVYg5ghG9WdKi2b53X-R9M8j3XF_JQlLKJL 
 
-This Arduino Nano: https://store-usa.arduino.cc/products/nano-33-ble-sense-rev2 
+This Arduino Nano: [Arduino Nano](https://store-usa.arduino.cc/products/nano-33-ble-sense-rev2) 
 
-This Button: https://www.amazon.ca/dp/B01J9KO7DC?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1
+This Button: [Button](https://www.amazon.ca/dp/B01J9KO7DC?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1)
 
-Servo motor for driving: https://hitecrcd.com/hs-5055mg-economy-metal-gear-feather-servo/ 
+Servo motor for driving: [Servo Motor](https://hitecrcd.com/hs-5055mg-economy-metal-gear-feather-servo/) 
 
 
 
