@@ -1,5 +1,6 @@
 # WRO-future-engineers
 WRO 2026 Andrew and Nathan
+YouTube Video: [Open Challenge](https://youtu.be/nm6dfaRhhao) 
 
 # Materials
 Originally we planned to use the following RC car for its chassis: [Original Chassis](https://www.amazon.ca/Full-Scale-Rear-Wheel-Rechargeable-Control-Crawler/dp/B0G24MWNGD?th=1)
