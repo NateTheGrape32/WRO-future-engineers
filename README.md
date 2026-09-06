@@ -1,8 +1,9 @@
 # WRO-future-engineers
 WRO 2026 Andrew and Nathan
 
-YouTube Video: [Open Challenge](https://youtu.be/nm6dfaRhhao) 
-
+YouTube Video: 
+* [Open Challenge](https://youtu.be/nm6dfaRhhao) 
+* [Obstacle Challenge](https://youtu.be/E2D7EVUFy_I)
 ## Nathan
 <img width="216" height="468" alt="image" src="https://github.com/user-attachments/assets/634dd514-74dc-4eda-8f5b-93eaa352f9a8" />
 
