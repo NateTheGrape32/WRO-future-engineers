@@ -7,6 +7,7 @@ YouTube Video: [Open Challenge](https://youtu.be/nm6dfaRhhao)
 <img width="216" height="468" alt="image" src="https://github.com/user-attachments/assets/634dd514-74dc-4eda-8f5b-93eaa352f9a8" />
 
 ## Andrew
+<img width="216" height="288" alt="image" src="https://github.com/user-attachments/assets/ce0cad55-e01e-4dd4-b5c8-e2d560d0db9d" />
 
 
 # Materials
